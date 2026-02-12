@@ -1,14 +1,5 @@
 import { buildCommand } from "@stricli/core";
-import {
-  intro,
-  outro,
-  spinner,
-  text,
-  select,
-  isCancel,
-  cancel,
-  log,
-} from "@clack/prompts";
+import { intro, outro, spinner, text, isCancel, cancel, log } from "@clack/prompts";
 import pc from "picocolors";
 import { SatiApiClient, PaymentRequiredError } from "../lib/api.js";
 import { formatRegistration } from "../lib/format.js";
@@ -107,8 +98,7 @@ export const registerCommand = buildCommand({
         message: "Agent name:",
         validate: (v) => {
           if (!v.trim()) return "Name is required";
-          if (new TextEncoder().encode(v).length > 32)
-            return "Max 32 bytes";
+          if (new TextEncoder().encode(v).length > 32) return "Max 32 bytes";
           return undefined;
         },
       });
@@ -122,8 +112,7 @@ export const registerCommand = buildCommand({
     if (!description) {
       const result = await text({
         message: "Description:",
-        validate: (v) =>
-          !v.trim() ? "Description is required" : undefined,
+        validate: (v) => (!v.trim() ? "Description is required" : undefined),
       });
       if (isCancel(result)) {
         cancel("Cancelled");
@@ -147,8 +136,7 @@ export const registerCommand = buildCommand({
     if (!owner) {
       const result = await text({
         message: "Solana wallet address (NFT owner):",
-        validate: (v) =>
-          v.length < 32 ? "Must be a valid Solana address" : undefined,
+        validate: (v) => (v.length < 32 ? "Must be a valid Solana address" : undefined),
       });
       if (isCancel(result)) {
         cancel("Cancelled");
@@ -228,22 +216,12 @@ export const registerCommand = buildCommand({
         console.log();
         console.log(pc.bold("  How to pay:"));
         console.log();
-        console.log(
-          `  ${pc.dim("1.")} Set up AgentWallet (recommended for agents):`,
-        );
-        console.log(
-          `     Set AGENT_WALLET_URL and AGENT_WALLET_USERNAME env vars`,
-        );
-        console.log(
-          `     ${pc.dim("See:")} https://agentwallet.mcpay.tech/skill.md`,
-        );
+        console.log(`  ${pc.dim("1.")} Set up AgentWallet (recommended for agents):`);
+        console.log(`     Set AGENT_WALLET_URL and AGENT_WALLET_USERNAME env vars`);
+        console.log(`     ${pc.dim("See:")} https://agentwallet.mcpay.tech/skill.md`);
         console.log();
-        console.log(
-          `  ${pc.dim("2.")} Provide a pre-computed payment header:`,
-        );
-        console.log(
-          `     create-sati-agent register --payment-header "<header>"`,
-        );
+        console.log(`  ${pc.dim("2.")} Provide a pre-computed payment header:`);
+        console.log(`     create-sati-agent register --payment-header "<header>"`);
         console.log();
         return;
       }

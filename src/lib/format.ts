@@ -9,23 +9,17 @@ export function truncateAddress(addr: string, len = 4): string {
 export function formatAgent(agent: AgentInfo): string {
   const lines: string[] = [];
 
-  lines.push(
-    `${pc.bold(agent.name)} ${pc.dim(`#${agent.memberNumber}`)}`,
-  );
+  lines.push(`${pc.bold(agent.name)} ${pc.dim(`#${agent.memberNumber}`)}`);
   lines.push(`  ${pc.dim("Mint:")}    ${pc.cyan(agent.mint)}`);
   lines.push(`  ${pc.dim("Owner:")}   ${agent.owner}`);
-  lines.push(
-    `  ${pc.dim("Status:")}  ${agent.active ? pc.green("active") : pc.red("inactive")}`,
-  );
+  lines.push(`  ${pc.dim("Status:")}  ${agent.active ? pc.green("active") : pc.red("inactive")}`);
 
   if (agent.description) {
     lines.push(`  ${pc.dim("About:")}   ${agent.description}`);
   }
 
   if (agent.services?.length) {
-    const serviceNames = agent.services
-      .map((s) => s.name)
-      .join(", ");
+    const serviceNames = agent.services.map((s) => s.name).join(", ");
     lines.push(`  ${pc.dim("Services:")} ${serviceNames}`);
     for (const svc of agent.services) {
       lines.push(
@@ -37,9 +31,7 @@ export function formatAgent(agent: AgentInfo): string {
   if (agent.reputation) {
     lines.push("");
     lines.push(`  ${pc.dim("Reputation:")}`);
-    lines.push(
-      `    ${formatReputation(agent.reputation)}`,
-    );
+    lines.push(`    ${formatReputation(agent.reputation)}`);
   }
 
   if (agent.uri) {
@@ -54,23 +46,17 @@ export function formatAgentList(agents: AgentInfo[]): string {
 
   const lines: string[] = [];
 
-  for (let i = 0; i < agents.length; i++) {
-    const agent = agents[i]!;
+  for (const [i, agent] of agents.entries()) {
     const num = pc.dim(`${String(i + 1).padStart(3)}.`);
     const name = pc.bold(agent.name);
     const mint = pc.cyan(truncateAddress(agent.mint, 6));
     const owner = truncateAddress(agent.owner, 4);
-    const services = agent.services?.length
-      ? agent.services.map((s) => s.name).join(", ")
-      : pc.dim("none");
+    const services = agent.services?.length ? agent.services.map((s) => s.name).join(", ") : pc.dim("none");
 
     lines.push(`${num} ${name}`);
     lines.push(`     ${pc.dim("Mint:")} ${mint}  ${pc.dim("Owner:")} ${owner}  ${pc.dim("Services:")} ${services}`);
     if (agent.description) {
-      const desc =
-        agent.description.length > 80
-          ? agent.description.slice(0, 77) + "..."
-          : agent.description;
+      const desc = agent.description.length > 80 ? `${agent.description.slice(0, 77)}...` : agent.description;
       lines.push(`     ${pc.dim(desc)}`);
     }
   }
@@ -91,9 +77,7 @@ export function formatFeedbackList(items: FeedbackItem[]): string {
   for (const fb of items) {
     const tag = fb.tag1 ? pc.yellow(fb.tag1) : pc.dim("untagged");
     const value = pc.bold(String(fb.value));
-    const reviewer = fb.reviewer
-      ? truncateAddress(fb.reviewer, 4)
-      : pc.dim("anonymous");
+    const reviewer = fb.reviewer ? truncateAddress(fb.reviewer, 4) : pc.dim("anonymous");
 
     lines.push(`  ${tag} ${value}  ${pc.dim("by")} ${reviewer}`);
   }

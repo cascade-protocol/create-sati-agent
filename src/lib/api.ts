@@ -37,10 +37,7 @@ export class SatiApiClient {
   }
 
   // POST /api/register (x402 paywalled)
-  async register(
-    data: RegisterRequest,
-    paymentHeader?: string,
-  ): Promise<RegisterResponse> {
+  async register(data: RegisterRequest, paymentHeader?: string): Promise<RegisterResponse> {
     const url = `${this.baseUrl}/api/register`;
 
     // Path 1: AgentWallet proxy
@@ -61,14 +58,11 @@ export class SatiApiClient {
       });
 
       if (!res.ok) {
-        const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-        throw new ApiError(
-          res.status,
-          (body.error as string) ?? "AgentWallet proxy request failed",
-        );
+        const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+        throw new ApiError(res.status, (body.error as string) ?? "AgentWallet proxy request failed");
       }
 
-      const json = await res.json() as Record<string, unknown>;
+      const json = (await res.json()) as Record<string, unknown>;
       const response = json.response as Record<string, unknown> | undefined;
       return (response?.body ?? json) as RegisterResponse;
     }
@@ -96,11 +90,8 @@ export class SatiApiClient {
     }
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      throw new ApiError(
-        res.status,
-        (body.error as string) ?? `Request failed (${res.status})`,
-      );
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(res.status, (body.error as string) ?? `Request failed (${res.status})`);
     }
 
     return res.json() as Promise<RegisterResponse>;
@@ -122,11 +113,8 @@ export class SatiApiClient {
     const res = await fetch(`${this.baseUrl}/api/agents?${params}`);
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      throw new ApiError(
-        res.status,
-        (body.error as string) ?? "Failed to list agents",
-      );
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(res.status, (body.error as string) ?? "Failed to list agents");
     }
 
     return res.json() as Promise<AgentListResponse>;
@@ -134,25 +122,18 @@ export class SatiApiClient {
 
   // GET /api/agents/:mint
   async getAgent(mint: string, network = "mainnet"): Promise<AgentInfo> {
-    const res = await fetch(
-      `${this.baseUrl}/api/agents/${mint}?network=${network}`,
-    );
+    const res = await fetch(`${this.baseUrl}/api/agents/${mint}?network=${network}`);
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      throw new ApiError(
-        res.status,
-        (body.error as string) ?? "Failed to load agent",
-      );
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(res.status, (body.error as string) ?? "Failed to load agent");
     }
 
     return res.json() as Promise<AgentInfo>;
   }
 
   // POST /api/feedback
-  async submitFeedback(
-    data: FeedbackRequest,
-  ): Promise<FeedbackSubmitResponse> {
+  async submitFeedback(data: FeedbackRequest): Promise<FeedbackSubmitResponse> {
     const res = await fetch(`${this.baseUrl}/api/feedback`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -160,11 +141,8 @@ export class SatiApiClient {
     });
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      throw new ApiError(
-        res.status,
-        (body.error as string) ?? "Failed to submit feedback",
-      );
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(res.status, (body.error as string) ?? "Failed to submit feedback");
     }
 
     return res.json() as Promise<FeedbackSubmitResponse>;
@@ -186,16 +164,11 @@ export class SatiApiClient {
     if (opts?.tag1) params.set("tag1", opts.tag1);
     if (opts?.tag2) params.set("tag2", opts.tag2);
 
-    const res = await fetch(
-      `${this.baseUrl}/api/feedback/${mint}?${params}`,
-    );
+    const res = await fetch(`${this.baseUrl}/api/feedback/${mint}?${params}`);
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      throw new ApiError(
-        res.status,
-        (body.error as string) ?? "Failed to list feedback",
-      );
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(res.status, (body.error as string) ?? "Failed to list feedback");
     }
 
     return res.json() as Promise<FeedbackListResponse>;
@@ -215,16 +188,11 @@ export class SatiApiClient {
     if (opts?.tag1) params.set("tag1", opts.tag1);
     if (opts?.tag2) params.set("tag2", opts.tag2);
 
-    const res = await fetch(
-      `${this.baseUrl}/api/reputation/${mint}?${params}`,
-    );
+    const res = await fetch(`${this.baseUrl}/api/reputation/${mint}?${params}`);
 
     if (!res.ok) {
-      const body = await res.json().catch(() => ({})) as Record<string, unknown>;
-      throw new ApiError(
-        res.status,
-        (body.error as string) ?? "Failed to get reputation",
-      );
+      const body = (await res.json().catch(() => ({}))) as Record<string, unknown>;
+      throw new ApiError(res.status, (body.error as string) ?? "Failed to get reputation");
     }
 
     return res.json() as Promise<ReputationSummary>;

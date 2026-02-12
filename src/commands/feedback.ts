@@ -92,8 +92,7 @@ export const feedbackCommand = buildCommand({
     if (!agentMint) {
       const result = await text({
         message: "Agent mint address:",
-        validate: (v) =>
-          v.length < 32 ? "Must be a valid Solana address" : undefined,
+        validate: (v) => (v.length < 32 ? "Must be a valid Solana address" : undefined),
       });
       if (isCancel(result)) {
         cancel("Cancelled");
@@ -125,7 +124,7 @@ export const feedbackCommand = buildCommand({
         message: "Value:",
         validate: (v) => {
           const n = Number(v);
-          return isNaN(n) ? "Must be a number" : undefined;
+          return Number.isNaN(n) ? "Must be a number" : undefined;
         },
       });
       if (isCancel(result)) {
