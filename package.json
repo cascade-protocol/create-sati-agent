@@ -1,0 +1,41 @@
+{
+  "name": "create-sati-agent",
+  "version": "0.1.0",
+  "description": "CLI for AI agent identity on Solana - register, discover, review, and check reputation via SATI",
+  "type": "module",
+  "bin": {
+    "create-sati-agent": "./dist/bin/cli.js"
+  },
+  "scripts": {
+    "build": "tsc",
+    "dev": "tsc -w",
+    "prepublishOnly": "npm run build"
+  },
+  "dependencies": {
+    "@clack/prompts": "^0.11.0",
+    "@stricli/core": "^1.2.4",
+    "picocolors": "^1.1.1"
+  },
+  "devDependencies": {
+    "@types/node": "^22.0.0",
+    "typescript": "^5.9.0"
+  },
+  "files": [
+    "dist/**",
+    "README.md",
+    "LICENSE"
+  ],
+  "keywords": [
+    "solana",
+    "ai-agent",
+    "identity",
+    "sati",
+    "erc-8004",
+    "reputation",
+    "x402"
+  ],
+  "license": "Apache-2.0",
+  "engines": {
+    "node": ">=18.0.0"
+  }
+}
