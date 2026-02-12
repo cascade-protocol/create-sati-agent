@@ -1,6 +1,6 @@
 {
   "name": "create-sati-agent",
-  "version": "0.1.1",
+  "version": "0.2.0",
   "description": "CLI for AI agent identity on Solana - register, discover, review, and check reputation via SATI",
   "type": "module",
   "sideEffects": false,
@@ -19,18 +19,23 @@
     "create-sati-agent": "./dist/bin/cli.js"
   },
   "scripts": {
-    "build": "npm run clean && tsdown --publint",
+    "build": "pnpm run clean && tsdown --publint",
     "dev": "tsdown --watch",
     "type-check": "tsc --noEmit",
     "lint": "biome check",
     "lint:fix": "biome check --write",
-    "check": "npm run type-check && npm run lint",
+    "check": "pnpm type-check && pnpm lint",
     "clean": "rm -rf dist",
-    "prepublishOnly": "npm run build"
+    "prepublishOnly": "pnpm build"
   },
   "dependencies": {
+    "@cascade-fyi/sati-agent0-sdk": "^0.5.0",
+    "@cascade-fyi/sati-sdk": "^0.8.0",
     "@clack/prompts": "^0.11.0",
+    "@solana-program/token-2022": "^0.9.0",
+    "@solana/kit": "^5.5.1",
     "@stricli/core": "^1.2.4",
+    "agent0-sdk": "^1.5.0",
     "picocolors": "^1.1.1"
   },
   "devDependencies": {

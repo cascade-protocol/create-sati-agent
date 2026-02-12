@@ -1,7 +1,7 @@
 import { buildCommand, numberParser } from "@stricli/core";
 import { intro, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
-import { SatiApiClient } from "../lib/api.js";
+import { createSdk } from "../lib/sdk.js";
 import { formatAgentList } from "../lib/format.js";
 
 interface DiscoverFlags {
@@ -51,15 +51,19 @@ export const discoverCommand = buildCommand({
     positional: { kind: "tuple", parameters: [] },
   },
   async func(flags: DiscoverFlags) {
+    const sdk = createSdk(flags.network);
+
+    const filters = {
+      ...(flags.name && { name: flags.name }),
+      ...(flags.owner && { owners: [flags.owner] }),
+    };
+    const options = {
+      ...(flags.limit && { limit: flags.limit }),
+    };
+
     if (flags.json) {
-      const client = new SatiApiClient();
-      const result = await client.listAgents({
-        name: flags.name,
-        owner: flags.owner,
-        limit: flags.limit,
-        network: flags.network,
-      });
-      console.log(JSON.stringify(result, null, 2));
+      const agents = await sdk.searchAgents(filters, options);
+      console.log(JSON.stringify(agents, null, 2));
       return;
     }
 
@@ -69,17 +73,11 @@ export const discoverCommand = buildCommand({
     s.start("Searching agents...");
 
     try {
-      const client = new SatiApiClient();
-      const result = await client.listAgents({
-        name: flags.name,
-        owner: flags.owner,
-        limit: flags.limit,
-        network: flags.network,
-      });
+      const agents = await sdk.searchAgents(filters, options);
 
-      s.stop(`Found ${result.count} agent(s) on ${flags.network}`);
+      s.stop(`Found ${agents.length} agent(s) on ${flags.network}`);
       console.log();
-      console.log(formatAgentList(result.agents));
+      console.log(formatAgentList(agents));
       console.log();
       outro(pc.dim("Use 'create-sati-agent info <mint>' for details"));
     } catch (error) {

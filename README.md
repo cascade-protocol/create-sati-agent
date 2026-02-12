@@ -1,152 +1,125 @@
 # create-sati-agent
 
-CLI for AI agent identity on Solana. Register, discover, review, and check reputation - powered by the [SATI Identity Service](https://sati.cascade.fyi) (ERC-8004 compatible).
+On-chain identity for AI agents on Solana. Your agent gets a Token-2022 NFT with metadata on IPFS, discoverable by other agents and humans, with on-chain reputation from feedback attestations.
 
-## Quick Start
+Built on [SATI](https://sati.cascade.fyi) (Solana Attestation & Trust Infrastructure). Follows the [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) agent identity standard.
+
+## 2-Minute Setup
+
+**1. Create `agent-registration.json` in your project root:**
+
+```json
+{
+  "name": "MyAgent",
+  "description": "AI assistant for code review",
+  "image": "https://example.com/avatar.png",
+  "services": [
+    {"name": "MCP", "endpoint": "https://myagent.com/mcp"}
+  ],
+  "active": true,
+  "supportedTrust": ["reputation"]
+}
+```
+
+**2. Publish on-chain:**
 
 ```bash
+npx create-sati-agent publish --network devnet
+```
+
+**3. Done.** Your agent now has:
+- A Token-2022 NFT on Solana
+- Metadata on IPFS
+- A `registrations` array written back into the file
+- Discoverability via `npx create-sati-agent discover`
+
+Commit `agent-registration.json` to your repo. Other agents can find your identity through GitHub search or the SATI registry.
+
+## What Gets Created
+
+The CLI builds an [ERC-8004 registration file](https://eips.ethereum.org/EIPS/eip-8004) for your agent containing identity, service endpoints, and trust configuration, uploads it to IPFS, and mints a Token-2022 NFT on Solana pointing to it.
+
+You provide the basics (name, description, image, services). The CLI handles:
+- **MCP endpoint** - if provided, the SDK auto-fetches your tools, prompts, and resources
+- **A2A endpoint** - if provided, the SDK auto-fetches your agent skills from the agent card
+- **Trust model** - defaults to `reputation` (on-chain feedback)
+- **IPFS upload** - handled automatically, no Pinata key needed
+
+## Wallet Setup
+
+You need a funded Solana wallet. Two options:
+
+**Option A: Solana keypair** (direct, recommended for developers)
+
+```bash
+# Generate a keypair if you don't have one
+solana-keygen new
+
+# The CLI uses ~/.config/solana/id.json by default
+npx create-sati-agent publish --network devnet
+
+# Or point to a specific keypair
+npx create-sati-agent publish --keypair ~/my-keypair.json --network devnet
+```
+
+**Option B: AgentWallet** (custodial, for AI agents without local keys)
+
+If you have [AgentWallet](https://agentwallet.mcpay.tech/skill.md) configured at `~/.agentwallet/config.json`, the CLI uses it automatically. Registration costs $0.30 USDC via [x402](https://www.x402.org/).
+
+The CLI tries the keypair first, then falls back to AgentWallet. If neither is found, it shows setup instructions.
+
+## Update Your Agent
+
+Edit `agent-registration.json` and run `publish` again:
+
+```bash
+npx create-sati-agent publish --network devnet
+```
+
+The CLI detects existing registrations in the file and updates the on-chain URI instead of creating a new agent.
+
+## Other Commands
+
+```bash
+# Check status and get instructions
+npx create-sati-agent
+
 # Discover registered agents
-npx create-sati-agent discover
+npx create-sati-agent discover --name "weather" --network devnet
 
 # Get agent details
-npx create-sati-agent info <AGENT_MINT>
+npx create-sati-agent info <MINT_ADDRESS> --network devnet
 
-# Give feedback (free, recorded on-chain)
+# Check reputation (count + average score)
+npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred
+
+# Give feedback (on-chain attestation, free)
 npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred
 
-# Check reputation
-npx create-sati-agent reputation <AGENT_MINT>
-
-# Register a new agent ($0.30 USDC via x402)
-npx create-sati-agent register --name "MyAgent" --description "AI assistant" --image "https://..." --owner <WALLET>
+# Transfer ownership
+npx create-sati-agent transfer <MINT> --new-owner <ADDRESS>
 ```
 
-## What is SATI?
+All commands support `--json` for machine-readable output and `--network devnet|mainnet` (default: mainnet).
 
-SATI (Solana Attestation & Trust Infrastructure) provides on-chain identity for AI agents on Solana. When you register an agent, it gets a **Token-2022 NFT** containing identity metadata (name, description, services, trust mechanisms) with the registration file stored on **IPFS**.
+## Feedback Tags
 
-Other agents and users can leave **on-chain feedback attestations** that build verifiable reputation. Feedback is stored as compressed on-chain accounts via [Light Protocol](https://www.lightprotocol.com/) (ZK Compression), keeping costs near zero while maintaining full verifiability.
+| tag | Range | Meaning |
+|-----|-------|---------|
+| `starred` | 0-100 | Overall rating |
+| `reachable` | 0 or 1 | Reachability check |
+| `uptime` | 0-100 | Uptime percentage |
+| `responseTime` | ms | Response time |
+| `successRate` | 0-100 | Success rate |
 
-The identity schema follows the [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) standard for cross-chain agent identity.
+## Colosseum Agent Hackathon
 
-## Commands
+Building for the [Colosseum Agent Hackathon](https://colosseum.com/agent-hackathon/skill.md)? Register your agent's on-chain identity:
 
-### `discover` - Find agents
-
-```bash
-# List all agents (mainnet)
-npx create-sati-agent discover
-
-# Search by name
-npx create-sati-agent discover --name "weather"
-
-# Filter by owner
-npx create-sati-agent discover --owner <WALLET_ADDRESS>
-
-# Devnet, limit results, JSON output
-npx create-sati-agent discover --network devnet --limit 5 --json
-```
-
-### `info` - Agent details
-
-```bash
-npx create-sati-agent info <MINT_ADDRESS>
-npx create-sati-agent info <MINT_ADDRESS> --network devnet
-npx create-sati-agent info <MINT_ADDRESS> --json
-```
-
-Returns agent metadata, services, and reputation summary.
-
-### `reputation` - Check trust score
-
-```bash
-npx create-sati-agent reputation <MINT_ADDRESS>
-npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred
-npx create-sati-agent reputation <MINT_ADDRESS> --network devnet --json
-```
-
-### `feedback` - Rate an agent
-
-```bash
-# With flags
-npx create-sati-agent feedback \
-  --agent <MINT_ADDRESS> \
-  --value 85 \
-  --tag1 starred \
-  --reviewer <YOUR_ADDRESS>
-
-# Interactive mode (prompts for missing fields)
-npx create-sati-agent feedback --agent <MINT_ADDRESS>
-```
-
-Feedback is free and recorded as an on-chain attestation. Available tags: `starred`, `reachable`, `uptime`, `responseTime`, `successRate`.
-
-### `register` - On-chain identity
-
-```bash
-# Interactive mode
-npx create-sati-agent register
-
-# All flags
-npx create-sati-agent register \
-  --name "MyAgent" \
-  --description "AI assistant that helps with coding" \
-  --image "https://example.com/avatar.png" \
-  --owner <SOLANA_WALLET> \
-  --mcp-endpoint "https://myagent.com/mcp" \
-  --network mainnet
-```
-
-Registration costs **$0.30 USDC** via the [x402](https://www.x402.org/) payment protocol.
-
-## x402 Payment for Registration
-
-The `register` command requires a $0.30 USDC payment settled on Solana via x402. Two options:
-
-### AgentWallet (recommended for AI agents)
-
-Set environment variables and the CLI handles payment automatically:
-
-```bash
-export AGENT_WALLET_URL="https://agentwallet.mcpay.tech"
-export AGENT_WALLET_USERNAME="your-wallet-username"
-npx create-sati-agent register --name "MyAgent" ...
-```
-
-See [AgentWallet docs](https://agentwallet.mcpay.tech/skill.md) for setup.
-
-### Manual Payment Header
-
-For advanced users who compute the x402 payment externally:
-
-```bash
-npx create-sati-agent register --payment-header "<x402-payment-header>" --name "MyAgent" ...
-```
-
-## Environment Variables
-
-| Variable | Required | Description |
-|----------|----------|-------------|
-| `AGENT_WALLET_URL` | For register | AgentWallet base URL |
-| `AGENT_WALLET_USERNAME` | For register | AgentWallet wallet username |
-| `SATI_API_URL` | No | Override API base (default: `https://sati.cascade.fyi`) |
-
-## Solana Integration
-
-This CLI interacts with Solana through the SATI Identity Service API:
-
-- **Agent identities** are Token-2022 NFTs minted on Solana via the [SATI program](https://github.com/cascade-protocol/sati)
-- **Feedback** is stored as compressed on-chain attestations using [Light Protocol](https://www.lightprotocol.com/) (ZK Compression) via the [Solana Attestation Service](https://github.com/solana-attestation-service/credential)
-- **Registration metadata** follows the [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) standard and is stored on IPFS
-- **x402 payments** are settled on Solana mainnet/devnet in USDC
-
-## Architecture
-
-- Built with [Stricli](https://github.com/bloomberg/stricli) (type-safe CLI framework)
-- [@clack/prompts](https://github.com/bombshell-dev/clack) for interactive UX
-- [picocolors](https://github.com/alexeyraspopov/picocolors) for terminal styling
-- Native `fetch` for HTTP (Node 18+, zero heavy dependencies)
-- All on-chain operations handled server-side - no Solana SDK needed in the CLI
+1. Create `agent-registration.json` in your project root (template above)
+2. Run `npx create-sati-agent publish --network devnet`
+3. Commit the file (includes `registrations` array after publish)
+4. Your agent is now discoverable on-chain
 
 ## License
 

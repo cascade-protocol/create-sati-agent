@@ -1,23 +1,25 @@
 import { buildCommand, numberParser } from "@stricli/core";
-import { intro, outro, spinner, text, select, isCancel, cancel } from "@clack/prompts";
+import { intro, outro, spinner, text, select, isCancel, cancel, log } from "@clack/prompts";
 import pc from "picocolors";
-import { SatiApiClient } from "../lib/api.js";
+import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
+import { createSdk } from "../lib/sdk.js";
+import { loadKeypair } from "../lib/keypair.js";
+import { loadAgentWalletConfig, awSubmitFeedback } from "../lib/agentwallet.js";
 
 interface FeedbackFlags {
   agent?: string;
   value?: number;
-  valueDecimals?: number;
   tag1?: string;
   tag2?: string;
   endpoint?: string;
-  reviewer?: string;
+  keypair?: string;
   network: "devnet" | "mainnet";
   json?: boolean;
 }
 
 export const feedbackCommand = buildCommand({
   docs: {
-    brief: "Give feedback on an agent (free, recorded on-chain)",
+    brief: "Give feedback on an agent (recorded on-chain)",
   },
   parameters: {
     flags: {
@@ -31,12 +33,6 @@ export const feedbackCommand = buildCommand({
         kind: "parsed",
         parse: numberParser,
         brief: "Score value",
-        optional: true,
-      },
-      valueDecimals: {
-        kind: "parsed",
-        parse: numberParser,
-        brief: "Decimal places for value",
         optional: true,
       },
       tag1: {
@@ -57,10 +53,10 @@ export const feedbackCommand = buildCommand({
         brief: "Specific service endpoint being reviewed",
         optional: true,
       },
-      reviewer: {
+      keypair: {
         kind: "parsed",
         parse: String,
-        brief: "Your Solana address (for attribution)",
+        brief: "Path to Solana keypair JSON (default: ~/.config/solana/id.json)",
         optional: true,
       },
       network: {
@@ -84,7 +80,6 @@ export const feedbackCommand = buildCommand({
       intro(pc.cyan("SATI - Give Feedback"));
     }
 
-    // Collect missing required fields interactively
     let agentMint = flags.agent;
     let value = flags.value;
     let tag1 = flags.tag1;
@@ -134,20 +129,69 @@ export const feedbackCommand = buildCommand({
       value = Number(result);
     }
 
+    // Try keypair first, then AgentWallet fallback
+    const signer = await loadKeypair(flags.keypair).catch(() => null);
+
+    if (signer) {
+      const s = !isJson ? spinner() : null;
+      s?.start("Submitting feedback on-chain...");
+
+      const sdk = createSdk(flags.network, signer);
+      const chain = SOLANA_CAIP2_CHAINS[flags.network];
+      const agentId = formatSatiAgentId(agentMint, chain);
+
+      try {
+        const handle = await sdk.giveFeedback(agentId, value, tag1, flags.tag2, flags.endpoint);
+
+        if (isJson) {
+          console.log(JSON.stringify({ txHash: handle.hash, agentId, reviewer: signer.address }, null, 2));
+          return;
+        }
+
+        s?.stop(pc.green("Feedback submitted!"));
+        console.log();
+        console.log(`  ${pc.dim("Tx:")}       ${handle.hash}`);
+        console.log(`  ${pc.dim("Reviewer:")} ${signer.address}`);
+        console.log();
+        outro(pc.dim("Feedback recorded on Solana"));
+      } catch (error) {
+        s?.stop(pc.red("Failed"));
+        throw error;
+      }
+      return;
+    }
+
+    // AgentWallet fallback
+    const awConfig = loadAgentWalletConfig();
+    if (!awConfig) {
+      if (!isJson) {
+        log.error("No signing method available");
+        console.log();
+        console.log(`  ${pc.bold("Option 1:")} Provide a Solana keypair`);
+        console.log(`    create-sati-agent feedback --keypair ~/.config/solana/id.json`);
+        console.log();
+        console.log(`  ${pc.bold("Option 2:")} Set up AgentWallet`);
+        console.log(`    ${pc.dim("See:")} https://agentwallet.mcpay.tech/skill.md`);
+        console.log();
+      }
+      throw new Error("No keypair or AgentWallet config found");
+    }
+
+    if (!isJson) {
+      log.info(`Using AgentWallet (${awConfig.username})`);
+    }
+
     const s = !isJson ? spinner() : null;
-    s?.start("Submitting feedback on-chain...");
+    s?.start("Submitting feedback via API...");
 
     try {
-      const client = new SatiApiClient();
-      const result = await client.submitFeedback({
+      const result = await awSubmitFeedback(awConfig, {
+        network: flags.network,
         agentMint,
         value,
-        valueDecimals: flags.valueDecimals,
         tag1,
         tag2: flags.tag2,
         endpoint: flags.endpoint,
-        reviewerAddress: flags.reviewer,
-        network: flags.network,
       });
 
       if (isJson) {
@@ -157,8 +201,8 @@ export const feedbackCommand = buildCommand({
 
       s?.stop(pc.green("Feedback submitted!"));
       console.log();
-      console.log(`  ${pc.dim("Tx:")}          ${result.txSignature}`);
-      console.log(`  ${pc.dim("Attestation:")} ${result.attestationAddress}`);
+      console.log(`  ${pc.dim("Tx:")}       ${result.txHash}`);
+      console.log(`  ${pc.dim("Reviewer:")} ${awConfig.solanaAddress}`);
       console.log();
       outro(pc.dim("Feedback recorded on Solana"));
     } catch (error) {

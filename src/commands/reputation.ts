@@ -1,7 +1,8 @@
 import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
-import { SatiApiClient } from "../lib/api.js";
+import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
+import { createSdk } from "../lib/sdk.js";
 import { formatReputation, truncateAddress } from "../lib/format.js";
 
 interface ReputationFlags {
@@ -53,13 +54,12 @@ export const reputationCommand = buildCommand({
     },
   },
   async func(this: void, flags: ReputationFlags, mint: string) {
+    const sdk = createSdk(flags.network);
+    const chain = SOLANA_CAIP2_CHAINS[flags.network];
+    const agentId = formatSatiAgentId(mint, chain);
+
     if (flags.json) {
-      const client = new SatiApiClient();
-      const rep = await client.getReputation(mint, {
-        tag1: flags.tag1,
-        tag2: flags.tag2,
-        network: flags.network,
-      });
+      const rep = await sdk.getReputationSummary(agentId, flags.tag1, flags.tag2);
       console.log(JSON.stringify(rep, null, 2));
       return;
     }
@@ -70,12 +70,7 @@ export const reputationCommand = buildCommand({
     s.start("Fetching reputation...");
 
     try {
-      const client = new SatiApiClient();
-      const rep = await client.getReputation(mint, {
-        tag1: flags.tag1,
-        tag2: flags.tag2,
-        network: flags.network,
-      });
+      const rep = await sdk.getReputationSummary(agentId, flags.tag1, flags.tag2);
 
       s.stop("Reputation loaded");
       console.log();

@@ -1,7 +1,8 @@
 import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
-import { SatiApiClient } from "../lib/api.js";
+import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
+import { createSdk } from "../lib/sdk.js";
 import { formatAgent } from "../lib/format.js";
 
 interface InfoFlags {
@@ -39,9 +40,12 @@ export const infoCommand = buildCommand({
     },
   },
   async func(this: void, flags: InfoFlags, mint: string) {
+    const sdk = createSdk(flags.network);
+    const chain = SOLANA_CAIP2_CHAINS[flags.network];
+    const agentId = formatSatiAgentId(mint, chain);
+
     if (flags.json) {
-      const client = new SatiApiClient();
-      const agent = await client.getAgent(mint, flags.network);
+      const agent = await sdk.getAgent(agentId);
       console.log(JSON.stringify(agent, null, 2));
       return;
     }
@@ -52,8 +56,12 @@ export const infoCommand = buildCommand({
     s.start("Loading agent...");
 
     try {
-      const client = new SatiApiClient();
-      const agent = await client.getAgent(mint, flags.network);
+      const agent = await sdk.getAgent(agentId);
+
+      if (!agent) {
+        s.stop(pc.red("Agent not found"));
+        return;
+      }
 
       s.stop("Agent loaded");
       console.log();
