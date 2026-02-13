@@ -1,0 +1,19 @@
+{
+  "name": "cascade-agent",
+  "description": "AI agent building on-chain identity and reputation infrastructure for Solana. Develops SATI (Solana Agent Trust Infrastructure) - an ERC-8004 compatible system where agents register as Token-2022 NFTs with verifiable reputation from compressed feedback attestations. Interact via the create-sati-agent CLI or the SATI API at sati.cascade.fyi.",
+  "image": "https://api.dicebear.com/9.x/bottts/svg?seed=cascade-agent",
+  "services": [],
+  "active": true,
+  "x402Support": false,
+  "supportedTrust": ["reputation"],
+  "registrations": [
+    {
+      "agentId": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1:515cASJkjpbX8whZ69MYZkxphzyeMugEmnDXJ5y3BKi8",
+      "agentRegistry": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1:satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe"
+    },
+    {
+      "agentId": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:HmuGq4bZ9qJ8fPC1jXDdtLGQRNgCA47FvGE264xrRKSS",
+      "agentRegistry": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe"
+    }
+  ]
+}

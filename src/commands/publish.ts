@@ -2,6 +2,7 @@ import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner, log } from "@clack/prompts";
 import pc from "picocolors";
 import { SOLANA_CAIP2_CHAINS, SATI_PROGRAM_ADDRESS } from "@cascade-fyi/sati-agent0-sdk";
+import type { KeyPairSigner } from "@solana/kit";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { loadAgentWalletConfig, awRegisterAgent } from "../lib/agentwallet.js";
@@ -12,6 +13,70 @@ interface PublishFlags {
   keypair?: string;
   network: "devnet" | "mainnet";
   json?: boolean;
+}
+
+const NETWORK_FOR_CHAIN = Object.fromEntries(
+  Object.entries(SOLANA_CAIP2_CHAINS).map(([net, ch]) => [ch, net]),
+) as Record<string, "devnet" | "mainnet" | "localnet">;
+
+async function syncOtherNetworks(
+  signer: KeyPairSigner,
+  currentNetwork: "devnet" | "mainnet",
+  data: Record<string, unknown>,
+  services: Array<{ name: string; endpoint: string }> | undefined,
+  active: boolean | undefined,
+  supportedTrust: string[] | undefined,
+  isJson: boolean | undefined,
+  name: string,
+  description: string,
+  image: string | undefined,
+) {
+  const regs = data.registrations as Array<{ agentId: string; agentRegistry: string }> | undefined;
+  if (!regs || regs.length < 2) return;
+
+  const currentChain = SOLANA_CAIP2_CHAINS[currentNetwork];
+  const otherRegs = regs.filter(
+    (r) => typeof r.agentRegistry === "string" && !r.agentRegistry.startsWith(`${currentChain}:`),
+  );
+  if (otherRegs.length === 0) return;
+
+  for (const reg of otherRegs) {
+    const chainPrefix = reg.agentRegistry.split(":").slice(0, 2).join(":");
+    const network = NETWORK_FOR_CHAIN[chainPrefix];
+    if (!network || network === "localnet") continue;
+
+    if (!isJson) {
+      log.info(`Syncing ${network}...`);
+    }
+
+    try {
+      const otherSdk = createSdk(network, signer);
+      const agent = await otherSdk.loadAgent(reg.agentId);
+      agent.updateInfo(name, description, image);
+      agent.removeEndpoints();
+      for (const svc of services ?? []) {
+        const upper = svc.name.toUpperCase();
+        if (upper === "MCP") await agent.setMCP(svc.endpoint);
+        else if (upper === "A2A") await agent.setA2A(svc.endpoint);
+      }
+      if (active !== undefined) agent.setActive(active);
+      if (supportedTrust) {
+        agent.setTrust(
+          supportedTrust.includes("reputation"),
+          supportedTrust.includes("cryptoEconomic"),
+          supportedTrust.includes("teeAttestation"),
+        );
+      }
+      await agent.updateIPFS();
+      if (!isJson) {
+        log.success(`${network} synced`);
+      }
+    } catch (error) {
+      if (!isJson) {
+        log.warn(`Failed to sync ${network}: ${error instanceof Error ? error.message : String(error)}`);
+      }
+    }
+  }
 }
 
 export const publishCommand = buildCommand({
@@ -64,7 +129,12 @@ export const publishCommand = buildCommand({
       throw new Error(`${REGISTRATION_FILE} must have "name" and "description" fields`);
     }
 
-    const isUpdate = registrations && registrations.length > 0;
+    // Find registration matching the target network
+    const chain = SOLANA_CAIP2_CHAINS[flags.network];
+    const existingReg = registrations?.find(
+      (r) => typeof r.agentRegistry === "string" && r.agentRegistry.startsWith(`${chain}:`),
+    );
+    const isUpdate = !!existingReg;
 
     if (!isJson) {
       intro(pc.cyan(isUpdate ? "SATI - Update Agent" : "SATI - Publish Agent"));
@@ -80,13 +150,8 @@ export const publishCommand = buildCommand({
         const sdk = createSdk(flags.network, signer);
 
         if (isUpdate) {
-          // Update existing agent
-          const satiReg = registrations.find(
-            (r) => typeof r.agentRegistry === "string" && r.agentRegistry.startsWith("solana:"),
-          );
-          if (!satiReg) {
-            throw new Error("No Solana registration found in registrations array");
-          }
+          // Update existing agent on this network
+          const satiReg = existingReg;
 
           s?.start("Loading agent...");
           const agent = await sdk.loadAgent(satiReg.agentId);
@@ -125,6 +190,21 @@ export const publishCommand = buildCommand({
           }
 
           s?.stop(pc.green("Agent updated!"));
+
+          // Sync other networks
+          await syncOtherNetworks(
+            signer,
+            flags.network,
+            data,
+            services,
+            active,
+            supportedTrust,
+            isJson,
+            name,
+            description,
+            image,
+          );
+
           console.log();
           console.log(formatRegistration({ hash: handle.hash, agentId: satiReg.agentId }));
           console.log();
@@ -158,15 +238,14 @@ export const publishCommand = buildCommand({
           const handle = await agent.registerIPFS();
           const agentId = agent.agentId;
 
-          // Write registrations back into the file
+          // Append registration for this network
           if (agentId) {
-            const chain = SOLANA_CAIP2_CHAINS[flags.network];
-            data.registrations = [
-              {
-                agentId,
-                agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
-              },
-            ];
+            const existing = (data.registrations ?? []) as Array<{ agentId: string; agentRegistry: string }>;
+            existing.push({
+              agentId,
+              agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
+            });
+            data.registrations = existing;
             writeRegistrationFile(filePath, data);
           }
 
@@ -176,6 +255,21 @@ export const publishCommand = buildCommand({
           }
 
           s?.stop(pc.green("Agent registered!"));
+
+          // Sync other networks (they need updated registrations array in IPFS)
+          await syncOtherNetworks(
+            signer,
+            flags.network,
+            data,
+            services,
+            active,
+            supportedTrust,
+            isJson,
+            name,
+            description,
+            image,
+          );
+
           console.log();
           console.log(formatRegistration({ hash: handle.hash, agentId }));
           console.log();
@@ -234,15 +328,14 @@ export const publishCommand = buildCommand({
         a2aEndpoint: a2aSvc?.endpoint,
       });
 
-      // Write registrations back if we got an agentId
+      // Append registration for this network
       if (result.agentId) {
-        const chain = SOLANA_CAIP2_CHAINS[flags.network];
-        data.registrations = [
-          {
-            agentId: result.agentId,
-            agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
-          },
-        ];
+        const existing = (data.registrations ?? []) as Array<{ agentId: string; agentRegistry: string }>;
+        existing.push({
+          agentId: result.agentId,
+          agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
+        });
+        data.registrations = existing;
         writeRegistrationFile(filePath, data);
       }
 
