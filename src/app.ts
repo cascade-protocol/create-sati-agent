@@ -29,7 +29,7 @@ const routes = buildRouteMap({
 export const app = buildApplication(routes, {
   name: "create-sati-agent",
   versionInfo: {
-    currentVersion: "0.2.0",
+    currentVersion: "0.2.1",
   },
   scanner: {
     caseStyle: "allow-kebab-for-camel",

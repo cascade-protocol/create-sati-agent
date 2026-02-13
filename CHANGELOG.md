@@ -1,5 +1,12 @@
 # Changelog
 
+## [0.2.1] - 2026-02-12
+
+### Fixed
+- Publish command now supports multi-network registrations (devnet + mainnet coexist)
+- New registrations append to the array instead of replacing existing ones
+- Cross-network sync: updating on one network automatically syncs all other registered networks
+
 ## [0.2.0] - 2026-02-12
 
 ### Changed
@@ -44,6 +51,7 @@
 - JSON output mode (`--json` flag) for all commands
 - Devnet and mainnet network support
 
+[0.2.1]: https://github.com/cascade-protocol/create-sati-agent/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/cascade-protocol/create-sati-agent/compare/v0.1.1...v0.2.0
 [0.1.1]: https://github.com/cascade-protocol/create-sati-agent/compare/v0.1.0...v0.1.1
 [0.1.0]: https://github.com/cascade-protocol/create-sati-agent/releases/tag/v0.1.0
