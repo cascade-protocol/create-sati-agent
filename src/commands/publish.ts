@@ -296,6 +296,30 @@ export const publishCommand = buildCommand({
         }
       } catch (error) {
         s?.stop(pc.red(isUpdate ? "Update failed" : "Registration failed"));
+
+        // Better error messages
+        const errorMsg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+        if (errorMsg.includes("insufficient") || errorMsg.includes("balance")) {
+          if (!isJson) {
+            console.log();
+            log.error("Insufficient SOL in wallet");
+            console.log();
+            console.log(`  Run: ${pc.cyan(`npx create-sati-agent setup --network ${flags.network}`)}`);
+            console.log();
+          }
+          process.exit(1);
+        }
+
+        if (errorMsg.includes("blockhash") || errorMsg.includes("timeout")) {
+          if (!isJson) {
+            console.log();
+            log.error("Network congestion - try again in a few seconds");
+            console.log();
+          }
+          process.exit(1);
+        }
+
         throw error;
       }
     }
