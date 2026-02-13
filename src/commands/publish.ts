@@ -5,7 +5,6 @@ import { SOLANA_CAIP2_CHAINS, SATI_PROGRAM_ADDRESS } from "@cascade-fyi/sati-age
 import type { KeyPairSigner } from "@solana/kit";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
-import { loadAgentWalletConfig, awRegisterAgent } from "../lib/agentwallet.js";
 import { formatRegistration } from "../lib/format.js";
 import { findRegistrationFile, readRegistrationFile, writeRegistrationFile, REGISTRATION_FILE } from "../lib/config.js";
 
@@ -140,10 +139,21 @@ export const publishCommand = buildCommand({
       intro(pc.cyan(isUpdate ? "SATI - Update Agent" : "SATI - Publish Agent"));
     }
 
-    // Try keypair first, then AgentWallet fallback
-    const signer = await loadKeypair(flags.keypair).catch(() => null);
+    // Load keypair
+    let signer: KeyPairSigner;
+    try {
+      signer = await loadKeypair(flags.keypair);
+    } catch (error) {
+      if (!isJson) {
+        log.error("No Solana keypair found");
+        console.log();
+        console.log(`  Run: ${pc.cyan("npx create-sati-agent setup")}`);
+        console.log();
+      }
+      throw new Error("Keypair required");
+    }
 
-    if (signer) {
+    {
       const s = !isJson ? spinner() : null;
 
       try {
@@ -279,79 +289,6 @@ export const publishCommand = buildCommand({
         s?.stop(pc.red(isUpdate ? "Update failed" : "Registration failed"));
         throw error;
       }
-      return;
-    }
-
-    // AgentWallet fallback (new registrations only)
-    if (isUpdate) {
-      if (!isJson) {
-        log.error("Updating requires a Solana keypair (AgentWallet does not support updates)");
-        console.log();
-        console.log(`  ${pc.cyan("create-sati-agent publish --keypair ~/.config/solana/id.json --network devnet")}`);
-        console.log();
-      }
-      throw new Error("AgentWallet does not support agent updates - provide a keypair");
-    }
-
-    const awConfig = loadAgentWalletConfig();
-    if (!awConfig) {
-      if (!isJson) {
-        log.error("No signing method available");
-        console.log();
-        console.log(`  ${pc.bold("Option 1:")} Provide a Solana keypair`);
-        console.log(`    create-sati-agent publish --keypair ~/.config/solana/id.json`);
-        console.log();
-        console.log(`  ${pc.bold("Option 2:")} Set up AgentWallet`);
-        console.log(`    ${pc.dim("See:")} https://agentwallet.mcpay.tech/skill.md`);
-        console.log();
-      }
-      throw new Error("No keypair or AgentWallet config found");
-    }
-
-    if (!isJson) {
-      log.info(`Using AgentWallet (${awConfig.username}) - $0.30 USDC via x402`);
-    }
-
-    const s = !isJson ? spinner() : null;
-    s?.start("Registering via AgentWallet...");
-
-    try {
-      const mcpSvc = services?.find((ep) => ep.name.toUpperCase() === "MCP");
-      const a2aSvc = services?.find((ep) => ep.name.toUpperCase() === "A2A");
-
-      const result = await awRegisterAgent(awConfig, {
-        network: flags.network,
-        name,
-        description,
-        image: image ?? "",
-        mcpEndpoint: mcpSvc?.endpoint,
-        a2aEndpoint: a2aSvc?.endpoint,
-      });
-
-      // Append registration for this network
-      if (result.agentId) {
-        const existing = (data.registrations ?? []) as Array<{ agentId: string; agentRegistry: string }>;
-        existing.push({
-          agentId: result.agentId,
-          agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
-        });
-        data.registrations = existing;
-        writeRegistrationFile(filePath, data);
-      }
-
-      if (isJson) {
-        console.log(JSON.stringify(result, null, 2));
-        return;
-      }
-
-      s?.stop(pc.green("Agent registered!"));
-      console.log();
-      console.log(formatRegistration(result));
-      console.log();
-      outro(pc.dim("Your agent identity is now on Solana"));
-    } catch (error) {
-      s?.stop(pc.red("Registration failed"));
-      throw error;
     }
   },
 });
