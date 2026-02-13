@@ -7,6 +7,7 @@ import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { formatRegistration } from "../lib/format.js";
 import { findRegistrationFile, readRegistrationFile, writeRegistrationFile, REGISTRATION_FILE } from "../lib/config.js";
+import { AgentRegistrationSchema } from "../lib/validation.js";
 
 interface PublishFlags {
   keypair?: string;
@@ -115,18 +116,26 @@ export const publishCommand = buildCommand({
       throw new Error(`${REGISTRATION_FILE} not found`);
     }
 
-    const data = readRegistrationFile(filePath);
-    const name = data.name as string | undefined;
-    const description = data.description as string | undefined;
-    const image = data.image as string | undefined;
-    const services = (data.services ?? data.endpoints) as Array<{ name: string; endpoint: string }> | undefined;
-    const active = data.active as boolean | undefined;
-    const supportedTrust = data.supportedTrust as string[] | undefined;
-    const registrations = data.registrations as Array<{ agentId: string; agentRegistry: string }> | undefined;
-
-    if (!name || !description) {
-      throw new Error(`${REGISTRATION_FILE} must have "name" and "description" fields`);
+    const rawData = readRegistrationFile(filePath);
+    
+    // Validate agent data
+    const validationResult = AgentRegistrationSchema.safeParse(rawData);
+    if (!validationResult.success) {
+      if (!isJson) {
+        log.error(`Invalid ${REGISTRATION_FILE}`);
+        console.log();
+        validationResult.error.issues.forEach((issue) => {
+          const path = issue.path.length > 0 ? issue.path.join(".") : "root";
+          console.log(`  ${pc.red("✗")} ${path}: ${issue.message}`);
+        });
+        console.log();
+      }
+      throw new Error("Validation failed");
     }
+    
+    const data = validationResult.data;
+    const { name, description, image, active, supportedTrust, registrations } = data;
+    const services = data.services ?? data.endpoints; // Support legacy 'endpoints' field
 
     // Find registration matching the target network
     const chain = SOLANA_CAIP2_CHAINS[flags.network];
@@ -205,7 +214,7 @@ export const publishCommand = buildCommand({
           await syncOtherNetworks(
             signer,
             flags.network,
-            data,
+            rawData,
             services,
             active,
             supportedTrust,
@@ -250,13 +259,13 @@ export const publishCommand = buildCommand({
 
           // Append registration for this network
           if (agentId) {
-            const existing = (data.registrations ?? []) as Array<{ agentId: string; agentRegistry: string }>;
+            const existing = registrations ?? [];
             existing.push({
               agentId,
               agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
             });
-            data.registrations = existing;
-            writeRegistrationFile(filePath, data);
+            const updatedData = { ...rawData, registrations: existing };
+            writeRegistrationFile(filePath, updatedData);
           }
 
           if (isJson) {
