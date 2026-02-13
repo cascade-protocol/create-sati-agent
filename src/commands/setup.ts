@@ -5,8 +5,7 @@ import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
 import { generateKeyPair, createKeyPairSignerFromBytes, type KeyPairSigner } from "@solana/kit";
-import { address } from "@solana/addresses";
-import { Connection, LAMPORTS_PER_SOL } from "@solana/web3.js";
+import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
 
 interface SetupFlags {
   network: "devnet" | "mainnet";
@@ -96,7 +95,7 @@ async function checkAndFund(keypair: KeyPairSigner, network: "devnet" | "mainnet
   const s = spinner();
   s.start("Checking balance...");
 
-  const publicKey = address(keypair.address);
+  const publicKey = new PublicKey(keypair.address);
   const balance = await connection.getBalance(publicKey);
   const sol = balance / LAMPORTS_PER_SOL;
 

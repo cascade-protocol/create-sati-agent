@@ -34,6 +34,7 @@
     "@clack/prompts": "^0.11.0",
     "@solana-program/token-2022": "^0.9.0",
     "@solana/kit": "^5.5.1",
+    "@solana/web3.js": "^1.98.4",
     "@stricli/core": "^1.2.4",
     "agent0-sdk": "^1.5.0",
     "picocolors": "^1.1.1",
