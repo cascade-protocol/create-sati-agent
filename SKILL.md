@@ -1,6 +1,6 @@
 ---
 name: create-sati-agent
-version: 0.2.0
+version: 0.3.0
 description: Register on-chain identity for AI agents on Solana via SATI (ERC-8004 compatible).
 homepage: https://github.com/cascade-protocol/create-sati-agent
 metadata: {"category":"identity","x402":{"supported":true,"chains":["solana"],"networks":["solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp","solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1"]}}
@@ -12,9 +12,32 @@ Get a verifiable on-chain identity for your agent on Solana. You get a Token-202
 
 **Already registered?** Check for `agent-registration.json` in your project root. If it has a `registrations` array, you're on-chain - skip to [Commands](#commands).
 
-**Wallet:** The CLI uses your [AgentWallet](https://agentwallet.mcpay.tech/skill.md) automatically if configured ($0.30 USDC via x402). Or pass `--keypair <path>` for a Solana keypair.
+---
 
-## Register Your Agent
+## Quick Start (3 Commands)
+
+### 1. Set up wallet
+```bash
+npx create-sati-agent setup --network devnet
+```
+Creates Solana keypair + funds with 0.01 SOL (devnet only, via SATI faucet).
+
+### 2. Create agent profile
+```bash
+npx create-sati-agent init
+```
+Interactive wizard to create `agent-registration.json`.
+
+### 3. Publish on-chain
+```bash
+npx create-sati-agent publish --network devnet
+```
+
+**Done!** ~5 minutes total. Your agent is now discoverable on-chain.
+
+---
+
+## Manual Registration (Alternative)
 
 ### 1. Create agent-registration.json
 
@@ -44,7 +67,7 @@ Create this file in your project root. **Do not use placeholder values.** Intros
   - `{"name": "email", "endpoint": "mailto:..."}` - contact email
   - The CLI auto-fetches capabilities from MCP and A2A endpoints and includes them in your on-chain metadata.
 - **`x402Support`** - Set `true` if you accept [x402](https://www.x402.org/) micropayments.
-- **`supportedTrust`** - Trust mechanisms you support: `"reputation"` (on-chain feedback), `"crypto-economic"` (staking), `"tee-attestation"` (TEE). Most agents should include at least `["reputation"]`.
+- **`supportedTrust`** - Trust mechanisms you support: `"reputation"` (on-chain feedback), `"cryptoEconomic"` (staking), `"teeAttestation"` (TEE). Most agents should include at least `["reputation"]`.
 
 ### 2. Publish on-chain
 
@@ -125,9 +148,41 @@ All commands support `--json` for machine-readable output and `--network devnet|
 
 ## Cost
 
-- **Registration**: $0.30 USDC via AgentWallet, or free with Solana keypair
+### Devnet (Testing)
+- **Setup**: Free (auto-funded with 0.01 SOL via SATI faucet)
+- **Registration**: Free (uses devnet SOL)
 - **Feedback / Discover / Info / Reputation**: Free
-- **Networks**: `--network devnet` (testing), `--network mainnet` (default)
+
+### Mainnet (Production)
+- **Setup**: Manual funding required (~0.01 SOL)
+- **Registration**: ~0.002 SOL (~$0.40 at $200/SOL)
+- **Feedback**: ~0.000005 SOL (just gas)
+- **Discover / Info / Reputation**: Free (read-only)
+
+---
+
+## Troubleshooting
+
+**"Keypair not found"**
+```bash
+npx create-sati-agent setup
+```
+
+**"Insufficient funds"**
+```bash
+# Devnet:
+npx create-sati-agent setup --network devnet
+
+# Mainnet:
+# Send ~0.01 SOL to your wallet address
+```
+
+**"Validation failed"**
+- Check `agent-registration.json` for required fields
+- Ensure `name` and `description` are filled
+- Ensure `image` and service `endpoint` are valid URLs
+
+---
 
 ## License
 

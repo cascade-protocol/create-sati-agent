@@ -4,9 +4,52 @@ On-chain identity for AI agents on Solana. Your agent gets a Token-2022 NFT with
 
 Built on [SATI](https://sati.cascade.fyi) (Solana Attestation & Trust Infrastructure). Follows the [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) agent identity standard.
 
-## 2-Minute Setup
+## Quick Start
 
-**1. Create `agent-registration.json` in your project root:**
+### 1. Set up your wallet
+```bash
+npx create-sati-agent setup --network devnet
+```
+
+This creates a Solana keypair at `~/.config/solana/id.json` and funds it with 0.01 SOL (devnet only, via SATI faucet).
+
+### 2. Create your agent profile
+```bash
+npx create-sati-agent init
+```
+
+Interactive wizard that creates `agent-registration.json` in your current directory.
+
+### 3. Publish on-chain
+```bash
+npx create-sati-agent publish --network devnet
+```
+
+**Done!** Your agent now has:
+- A Token-2022 NFT on Solana
+- Metadata on IPFS
+- A `registrations` array written back into the file
+- Discoverability via `discover` command
+
+**Total time: ~5 minutes**
+
+Commit `agent-registration.json` to your repo. Other agents can find your identity through GitHub search or the SATI registry.
+
+---
+
+## What Gets Created
+
+The CLI builds an [ERC-8004 registration file](https://eips.ethereum.org/EIPS/eip-8004) for your agent containing identity, service endpoints, and trust configuration, uploads it to IPFS, and mints a Token-2022 NFT on Solana pointing to it.
+
+You provide the basics (name, description, image, services). The CLI handles:
+- **MCP endpoint** - if provided, the SDK auto-fetches your tools, prompts, and resources
+- **A2A endpoint** - if provided, the SDK auto-fetches your agent skills from the agent card
+- **Trust model** - defaults to `reputation` (on-chain feedback)
+- **IPFS upload** - handled automatically, no Pinata key needed
+
+## Manual Setup (Alternative to `init`)
+
+If you prefer to create `agent-registration.json` manually:
 
 ```json
 {
@@ -21,52 +64,7 @@ Built on [SATI](https://sati.cascade.fyi) (Solana Attestation & Trust Infrastruc
 }
 ```
 
-**2. Publish on-chain:**
-
-```bash
-npx create-sati-agent publish --network devnet
-```
-
-**3. Done.** Your agent now has:
-- A Token-2022 NFT on Solana
-- Metadata on IPFS
-- A `registrations` array written back into the file
-- Discoverability via `npx create-sati-agent discover`
-
-Commit `agent-registration.json` to your repo. Other agents can find your identity through GitHub search or the SATI registry.
-
-## What Gets Created
-
-The CLI builds an [ERC-8004 registration file](https://eips.ethereum.org/EIPS/eip-8004) for your agent containing identity, service endpoints, and trust configuration, uploads it to IPFS, and mints a Token-2022 NFT on Solana pointing to it.
-
-You provide the basics (name, description, image, services). The CLI handles:
-- **MCP endpoint** - if provided, the SDK auto-fetches your tools, prompts, and resources
-- **A2A endpoint** - if provided, the SDK auto-fetches your agent skills from the agent card
-- **Trust model** - defaults to `reputation` (on-chain feedback)
-- **IPFS upload** - handled automatically, no Pinata key needed
-
-## Wallet Setup
-
-You need a funded Solana wallet. Two options:
-
-**Option A: Solana keypair** (direct, recommended for developers)
-
-```bash
-# Generate a keypair if you don't have one
-solana-keygen new
-
-# The CLI uses ~/.config/solana/id.json by default
-npx create-sati-agent publish --network devnet
-
-# Or point to a specific keypair
-npx create-sati-agent publish --keypair ~/my-keypair.json --network devnet
-```
-
-**Option B: AgentWallet** (custodial, for AI agents without local keys)
-
-If you have [AgentWallet](https://agentwallet.mcpay.tech/skill.md) configured at `~/.agentwallet/config.json`, the CLI uses it automatically. Registration costs $0.30 USDC via [x402](https://www.x402.org/).
-
-The CLI tries the keypair first, then falls back to AgentWallet. If neither is found, it shows setup instructions.
+Then run `npx create-sati-agent publish --network devnet`.
 
 ## Update Your Agent
 
@@ -78,9 +76,18 @@ npx create-sati-agent publish --network devnet
 
 The CLI detects existing registrations in the file and updates the on-chain URI instead of creating a new agent.
 
-## Other Commands
+## All Commands
 
 ```bash
+# Set up wallet (create keypair + fund devnet)
+npx create-sati-agent setup --network devnet
+
+# Create agent-registration.json interactively
+npx create-sati-agent init
+
+# Publish or update agent on-chain
+npx create-sati-agent publish --network devnet
+
 # Check status and get instructions
 npx create-sati-agent
 
@@ -93,7 +100,7 @@ npx create-sati-agent info <MINT_ADDRESS> --network devnet
 # Check reputation (count + average score)
 npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred
 
-# Give feedback (on-chain attestation, free)
+# Give feedback (on-chain attestation, free gas)
 npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred
 
 # Transfer ownership
@@ -112,14 +119,35 @@ All commands support `--json` for machine-readable output and `--network devnet|
 | `responseTime` | ms | Response time |
 | `successRate` | 0-100 | Success rate |
 
+## Mainnet Deployment
+
+For mainnet, you need to fund your wallet manually (devnet auto-funding doesn't work on mainnet):
+
+```bash
+# Create wallet
+npx create-sati-agent setup --network mainnet
+
+# Send ~0.01 SOL to the address shown
+# Then continue with init and publish
+
+npx create-sati-agent init
+npx create-sati-agent publish --network mainnet
+```
+
+**Costs:**
+- Agent registration: ~0.002 SOL (~$0.40 at $200/SOL)
+- Feedback submission: ~0.000005 SOL (free, just gas)
+- Discovery/info/reputation: Free (read-only)
+
 ## Colosseum Agent Hackathon
 
 Building for the [Colosseum Agent Hackathon](https://colosseum.com/agent-hackathon/skill.md)? Register your agent's on-chain identity:
 
-1. Create `agent-registration.json` in your project root (template above)
-2. Run `npx create-sati-agent publish --network devnet`
-3. Commit the file (includes `registrations` array after publish)
-4. Your agent is now discoverable on-chain
+1. Run `npx create-sati-agent setup --network devnet`
+2. Run `npx create-sati-agent init`
+3. Run `npx create-sati-agent publish --network devnet`
+4. Commit `agent-registration.json` (includes `registrations` array after publish)
+5. Your agent is now discoverable on-chain!
 
 ## License
 
