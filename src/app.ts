@@ -1,4 +1,5 @@
 import { buildApplication, buildRouteMap } from "@stricli/core";
+import { setupCommand } from "./commands/setup.js";
 import { publishCommand } from "./commands/publish.js";
 import { statusCommand } from "./commands/status.js";
 import { discoverCommand } from "./commands/discover.js";
@@ -9,6 +10,7 @@ import { transferCommand } from "./commands/transfer.js";
 
 const routes = buildRouteMap({
   routes: {
+    setup: setupCommand,
     publish: publishCommand,
     status: statusCommand,
     discover: discoverCommand,
