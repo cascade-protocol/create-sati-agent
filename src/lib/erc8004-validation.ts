@@ -9,7 +9,6 @@ export interface ValidationError {
   message: string;
 }
 
-const KNOWN_SERVICE_TYPES = ["MCP", "A2A", "OASF", "ENS", "DID", "agentWallet"];
 const VALID_TRUST_MODELS = ["reputation", "crypto-economic", "tee-attestation"];
 
 const ERC8004_SPEC_URL = "https://eips.ethereum.org/EIPS/eip-8004#registration-v1";
@@ -66,7 +65,7 @@ export function validateERC8004RegistrationFile(data: unknown): ValidationError[
       errors.push({ field: "properties", message: "Must be an object" });
     } else {
       const props = file.properties as Record<string, unknown>;
-      
+
       if (props.files !== undefined) {
         if (!Array.isArray(props.files)) {
           errors.push({ field: "properties.files", message: "Must be an array" });
@@ -183,7 +182,10 @@ export function validateERC8004RegistrationFile(data: unknown): ValidationError[
         }
 
         if (typeof registration.agentRegistry !== "string") {
-          errors.push({ field: `registrations[${i}].agentRegistry`, message: "Required, must be a string (CAIP-10 format)" });
+          errors.push({
+            field: `registrations[${i}].agentRegistry`,
+            message: "Required, must be a string (CAIP-10 format)",
+          });
         }
       });
     }

@@ -15,13 +15,13 @@ const MIN_BALANCE_SOL = 0.007;
 // Services with dedicated SDK setters (others stored in IPFS metadata)
 const SDK_SUPPORTED_SERVICES = ["MCP", "A2A", "ENS", "agentWallet"];
 
-async function checkEndpoint(url: string, name: string): Promise<boolean> {
+async function checkEndpoint(url: string): Promise<boolean> {
   try {
     const controller = new AbortController();
     const timeout = setTimeout(() => controller.abort(), 3000);
-    const res = await fetch(url, { 
+    const res = await fetch(url, {
       signal: controller.signal,
-      headers: { 'User-Agent': 'create-sati-agent' }
+      headers: { "User-Agent": "create-sati-agent" },
     });
     clearTimeout(timeout);
     return res.ok || res.status === 404; // 404 is fine, means server exists
@@ -94,9 +94,9 @@ async function ensureFunding(
       s?.stop(pc.red("Faucet request failed"));
       if (!isJson) {
         console.log();
-        
+
         // Check if it's a rate limit error
-        if (res.status === 429 || result.error?.toLowerCase().includes('rate limit')) {
+        if (res.status === 429 || result.error?.toLowerCase().includes("rate limit")) {
           log.error("Faucet rate limit (1 request per 5 minutes)");
           console.log();
           console.log(pc.dim("Your wallet address:"));
@@ -119,15 +119,15 @@ async function ensureFunding(
     }
 
     s?.stop(pc.dim(`Funded: +0.01 SOL (${result.signature?.slice(0, 8)}...)`));
-    
+
     // Wait for transaction confirmation (devnet is usually fast, but not instant)
     if (!isJson) {
       s = spinner();
       s.start("Waiting for confirmation...");
     }
-    await new Promise(resolve => setTimeout(resolve, 3000));
+    await new Promise((resolve) => setTimeout(resolve, 3000));
     s?.stop(pc.dim("Confirmed"));
-    
+
     // Return new balance
     return await getBalance(signer, network);
   } catch (error) {
@@ -248,7 +248,7 @@ export const publishCommand = buildCommand({
     }
 
     const rawData = readRegistrationFile(filePath);
-    
+
     // Validate ERC-8004 registration file format
     const validationErrors = validateERC8004RegistrationFile(rawData);
     if (validationErrors.length > 0) {
@@ -273,8 +273,8 @@ export const publishCommand = buildCommand({
         const file = rawData as Record<string, unknown>;
         console.log(pc.dim("Agent details:"));
         console.log(pc.dim(`  Name: ${file.name}`));
-        if (typeof file.description === 'string') {
-          const desc = file.description.length > 60 ? file.description.slice(0, 60) + '...' : file.description;
+        if (typeof file.description === "string") {
+          const desc = file.description.length > 60 ? `${file.description.slice(0, 60)}...` : file.description;
           console.log(pc.dim(`  Description: ${desc}`));
         }
         if (Array.isArray(file.services) && file.services.length > 0) {
@@ -289,15 +289,16 @@ export const publishCommand = buildCommand({
       }
       return;
     }
-    
+
     const data = rawData as Record<string, unknown>;
     const { name, description, image, active, supportedTrust, registrations, services } = data;
     const x402Support = data.x402Support;
 
     // Find registration matching the target network
     const chain = SOLANA_CAIP2_CHAINS[flags.network];
-    const existingReg = registrations?.find(
-      (r) => typeof r.agentRegistry === "string" && r.agentRegistry.startsWith(`${chain}:`),
+    const regs = (registrations as any[] | undefined) ?? [];
+    const existingReg = regs.find(
+      (r: any) => typeof r.agentRegistry === "string" && r.agentRegistry.startsWith(`${chain}:`),
     );
     const isUpdate = !!existingReg;
 
@@ -309,7 +310,7 @@ export const publishCommand = buildCommand({
     let signer: KeyPairSigner;
     try {
       signer = await loadKeypair(flags.keypair);
-    } catch (error) {
+    } catch (_error) {
       if (!isJson) {
         log.error("No Solana keypair found");
         console.log();
@@ -324,18 +325,18 @@ export const publishCommand = buildCommand({
     if (!isJson && Array.isArray(services) && services.length > 0) {
       const s = spinner();
       s.start("Validating endpoints...");
-      
+
       const warnings: string[] = [];
       for (const svc of services as any[]) {
         // Only validate HTTP endpoints (MCP, A2A)
         if (svc.name === "MCP" || svc.name === "A2A") {
-          const reachable = await checkEndpoint(svc.endpoint, svc.name);
+          const reachable = await checkEndpoint(svc.endpoint);
           if (!reachable) {
             warnings.push(`${svc.name}: ${svc.endpoint}`);
           }
         }
       }
-      
+
       if (warnings.length > 0) {
         s.stop(pc.yellow("⚠ Some endpoints unreachable"));
         console.log();
@@ -371,7 +372,7 @@ export const publishCommand = buildCommand({
           const agent = await sdk.loadAgent(agentId);
 
           // Apply changes from file
-          agent.updateInfo(name, description, image);
+          agent.updateInfo(name as string, description as string, image as string | undefined);
 
           // Reset endpoints and re-add from file
           agent.removeEndpoints();
@@ -395,7 +396,7 @@ export const publishCommand = buildCommand({
             }
           }
 
-          if (active !== undefined) agent.setActive(active);
+          if (active !== undefined) agent.setActive(active as boolean);
           if (Array.isArray(supportedTrust) && supportedTrust.length > 0) {
             agent.setTrust(
               supportedTrust.includes("reputation"),
@@ -412,7 +413,7 @@ export const publishCommand = buildCommand({
 
           // Reconstruct full CAIP-2 agentId for output (registrations stores just mint per ERC-8004)
           const fullAgentId = `${chain}:${satiReg.agentId}`;
-          
+
           if (isJson) {
             console.log(JSON.stringify({ hash: handle.hash, agentId: fullAgentId }, null, 2));
             return;
@@ -425,13 +426,13 @@ export const publishCommand = buildCommand({
             signer,
             flags.network,
             rawData,
-            services,
-            active,
-            supportedTrust,
+            services as Array<{ name: string; endpoint: string }> | undefined,
+            active as boolean | undefined,
+            supportedTrust as string[] | undefined,
             isJson,
-            name,
-            description,
-            image,
+            name as string,
+            description as string,
+            image as string | undefined,
           );
 
           // Get final balance and calculate cost
@@ -441,7 +442,7 @@ export const publishCommand = buildCommand({
           console.log();
           console.log(formatRegistration({ hash: handle.hash, agentId: fullAgentId }));
           console.log();
-          
+
           // Cost breakdown
           if (cost > 0) {
             console.log(pc.dim(`Transaction cost: ${cost.toFixed(6)} SOL`));
@@ -490,15 +491,15 @@ export const publishCommand = buildCommand({
 
           // Append registration for this network
           if (mint) {
-            const existing = registrations ?? [];
+            const existing = (registrations as any[] | undefined) ?? [];
             existing.push({
-              agentId: mint,  // Just the mint address, not full CAIP-2
+              agentId: mint, // Just the mint address, not full CAIP-2
               agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
             });
             const updatedData = { ...rawData, registrations: existing };
             writeRegistrationFile(filePath, updatedData);
           }
-          
+
           const agentId = agent.agentId;
 
           if (isJson) {
@@ -513,13 +514,13 @@ export const publishCommand = buildCommand({
             signer,
             flags.network,
             data,
-            services,
-            active,
-            supportedTrust,
+            services as Array<{ name: string; endpoint: string }> | undefined,
+            active as boolean | undefined,
+            supportedTrust as string[] | undefined,
             isJson,
-            name,
-            description,
-            image,
+            name as string,
+            description as string,
+            image as string | undefined,
           );
 
           // Get final balance and calculate cost
@@ -529,7 +530,7 @@ export const publishCommand = buildCommand({
           console.log();
           console.log(formatRegistration({ hash: handle.hash, agentId }));
           console.log();
-          
+
           // Cost breakdown
           if (cost > 0) {
             console.log(pc.dim(`Transaction cost: ${cost.toFixed(6)} SOL`));
@@ -539,7 +540,7 @@ export const publishCommand = buildCommand({
 
           // Explorer link
           const network = flags.network === "devnet" ? "devnet" : "mainnet-beta";
-          const agentAddress = agentId?.split(':').pop();
+          const agentAddress = agentId?.split(":").pop();
           if (agentAddress) {
             console.log(pc.dim("View on Solana Explorer:"));
             console.log(pc.cyan(`  https://explorer.solana.com/address/${agentAddress}?cluster=${network}`));
@@ -552,7 +553,7 @@ export const publishCommand = buildCommand({
           console.log(pc.dim("  • Search for others:"), pc.cyan("npx create-sati-agent search"));
           console.log(pc.dim("  • Update info:"), pc.cyan("npx create-sati-agent publish"));
           console.log();
-          
+
           outro(pc.green("Your agent identity is now on Solana"));
         }
       } catch (error) {

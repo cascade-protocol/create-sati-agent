@@ -101,7 +101,9 @@ export const transferCommand = buildCommand({
         s?.stop(pc.yellow("⚠️  --refund-sol not yet implemented"));
         console.log();
         console.log(pc.dim("To refund remaining SOL manually:"));
-        console.log(pc.dim(`  solana transfer ${newOwner} ALL --keypair ${flags.keypair ?? "~/.config/solana/id.json"}`));
+        console.log(
+          pc.dim(`  solana transfer ${newOwner} ALL --keypair ${flags.keypair ?? "~/.config/solana/id.json"}`),
+        );
         console.log();
         process.exit(1);
       }
@@ -110,11 +112,11 @@ export const transferCommand = buildCommand({
       const refundedAmount = 0;
 
       if (isJson) {
-        const result: Record<string, unknown> = { 
-          txHash: handle.hash, 
-          from: signer.address, 
-          to: newOwner, 
-          agentId
+        const result: Record<string, unknown> = {
+          txHash: handle.hash,
+          from: signer.address,
+          to: newOwner,
+          agentId,
         };
         if (refundTx) {
           result.refundTx = refundTx;
@@ -129,13 +131,13 @@ export const transferCommand = buildCommand({
       console.log(`  ${pc.dim("Tx:")}   ${handle.hash}`);
       console.log(`  ${pc.dim("From:")} ${truncateAddress(signer.address, 6)}`);
       console.log(`  ${pc.dim("To:")}   ${truncateAddress(newOwner, 6)}`);
-      
+
       if (refundTx) {
         console.log();
         console.log(pc.green(`✓ Refunded ${refundedAmount.toFixed(4)} SOL to new owner`));
         console.log(`  ${pc.dim("Tx:")} ${refundTx}`);
       }
-      
+
       console.log();
       outro(pc.dim("Ownership transferred on Solana"));
     } catch (error) {

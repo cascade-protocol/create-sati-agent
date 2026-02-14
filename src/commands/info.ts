@@ -100,7 +100,7 @@ export const infoCommand = buildCommand({
           console.log(pc.dim("No feedback yet"));
           console.log();
         }
-      } catch (error) {
+      } catch (_error) {
         s.stop(pc.yellow("Feedback unavailable"));
         console.log(pc.dim("(Feedback query failed - schema may not be deployed on this network)"));
         console.log();

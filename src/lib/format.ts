@@ -82,15 +82,16 @@ export function formatFeedbackList(items: Feedback[]): string {
     const tag = fb.tags[0] ? pc.yellow(fb.tags[0]) : pc.dim("untagged");
     const value = fb.value !== undefined ? pc.bold(String(fb.value)) : pc.dim("--");
     const reviewer = fb.reviewer ? truncateAddress(fb.reviewer, 4) : pc.dim("anonymous");
-    
-    // Format timestamp if available
+
+    // Format timestamp if available (SDK may not expose this yet)
     let timestamp = "";
-    if (fb.timestamp) {
-      const date = new Date(fb.timestamp * 1000);
+    const fbAny = fb as any;
+    if (fbAny.timestamp) {
+      const date = new Date(fbAny.timestamp * 1000);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
-      
+
       if (diffDays === 0) {
         timestamp = pc.dim("today");
       } else if (diffDays === 1) {

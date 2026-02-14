@@ -6,41 +6,41 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { createKeyPairSignerFromBytes } from "@solana/kit";
 import { REGISTRATION_FILE } from "../lib/config.js";
-import { fileURLToPath } from "node:url";
-import { dirname } from "node:path";
-
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = dirname(__filename);
 
 const TEMPLATE = {
   type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   name: "MyAgent",
-  description: "A helpful AI agent that does X, Y, and Z. Explain what your agent does, how it works, and what problems it solves.",
+  description:
+    "A helpful AI agent that does X, Y, and Z. Explain what your agent does, how it works, and what problems it solves.",
   image: "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
   properties: {
     files: [
       {
         uri: "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
-        type: "image/svg+xml"
-      }
+        type: "image/svg+xml",
+      },
     ],
-    category: "image"
+    category: "image",
   },
   services: [
     {
       name: "MCP",
       endpoint: "https://myagent.com/mcp",
       version: "2025-06-18",
-      mcpTools: []
-    }
+      mcpTools: [],
+    },
   ],
   supportedTrust: ["reputation"],
   active: false,
   x402Support: false,
-  registrations: []
+  registrations: [],
 };
 
 const KEYPAIR_PATH = path.join(os.homedir(), ".config", "solana", "id.json");
+
+interface InitFlags {
+  force: boolean;
+}
 
 export const initCommand = buildCommand({
   docs: {
@@ -56,7 +56,7 @@ export const initCommand = buildCommand({
     },
     positional: { kind: "tuple", parameters: [] },
   },
-  async func(flags) {
+  async func(flags: InitFlags) {
     // 1. Create keypair if missing
     const hasKeypair = fs.existsSync(KEYPAIR_PATH);
     let address = "";
@@ -65,10 +65,10 @@ export const initCommand = buildCommand({
       const { publicKey, privateKey } = crypto.generateKeyPairSync("ed25519");
       const publicKeyBytes = publicKey.export({ type: "spki", format: "der" });
       const privateKeyBytes = privateKey.export({ type: "pkcs8", format: "der" });
-      
+
       const seed = privateKeyBytes.subarray(16, 48);
       const pubKey = publicKeyBytes.subarray(12, 44);
-      
+
       const fullKeypair = new Uint8Array(64);
       fullKeypair.set(seed, 0);
       fullKeypair.set(pubKey, 32);
@@ -113,7 +113,9 @@ export const initCommand = buildCommand({
     console.log();
     console.log(pc.dim("📚 Documentation & guides:"));
     console.log(pc.cyan("   • Best Practices: https://github.com/erc-8004/best-practices"));
-    console.log(pc.cyan("   • Registration Guide: https://github.com/erc-8004/best-practices/blob/main/Registration.md"));
+    console.log(
+      pc.cyan("   • Registration Guide: https://github.com/erc-8004/best-practices/blob/main/Registration.md"),
+    );
     console.log(pc.cyan("   • OASF Skills/Domains: https://schema.oasf.outshift.com/0.8.0"));
     console.log();
     console.log(pc.dim("💡 Tip: The template file has detailed comments for every field,"));

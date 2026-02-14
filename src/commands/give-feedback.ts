@@ -2,6 +2,7 @@ import { buildCommand, numberParser } from "@stricli/core";
 import { intro, outro, spinner, log } from "@clack/prompts";
 import pc from "picocolors";
 import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
+import type { KeyPairSigner } from "@solana/kit";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 
@@ -77,10 +78,10 @@ export const giveFeedbackCommand = buildCommand({
     }
 
     // Load keypair
-    let signer;
+    let signer: KeyPairSigner | undefined;
     try {
       signer = await loadKeypair(flags.keypair);
-    } catch (error) {
+    } catch (_error) {
       if (!isJson) {
         log.error("No Solana keypair found");
         console.log();
