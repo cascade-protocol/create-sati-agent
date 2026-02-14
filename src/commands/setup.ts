@@ -4,8 +4,7 @@ import pc from "picocolors";
 import fs from "node:fs";
 import path from "node:path";
 import os from "node:os";
-import { generateKeyPair, createKeyPairSignerFromBytes, type KeyPairSigner } from "@solana/kit";
-import { Connection, LAMPORTS_PER_SOL, PublicKey } from "@solana/web3.js";
+import { generateKeyPair, createKeyPairSignerFromBytes, type KeyPairSigner, createSolanaRpc, address } from "@solana/kit";
 
 interface SetupFlags {
   network: "devnet" | "mainnet";
@@ -90,14 +89,14 @@ export const setupCommand = buildCommand({
 async function checkAndFund(keypair: KeyPairSigner, network: "devnet" | "mainnet") {
   const rpcUrl = network === "devnet" ? "https://api.devnet.solana.com" : "https://api.mainnet-beta.solana.com";
 
-  const connection = new Connection(rpcUrl, "confirmed");
+  const rpc = createSolanaRpc(rpcUrl);
 
   const s = spinner();
   s.start("Checking balance...");
 
-  const publicKey = new PublicKey(keypair.address);
-  const balance = await connection.getBalance(publicKey);
-  const sol = balance / LAMPORTS_PER_SOL;
+  const addr = address(keypair.address);
+  const { value: balance } = await rpc.getBalance(addr, { commitment: "confirmed" }).send();
+  const sol = Number(balance) / 1_000_000_000; // LAMPORTS_PER_SOL
 
   s.stop(`Balance: ${sol.toFixed(4)} SOL`);
 

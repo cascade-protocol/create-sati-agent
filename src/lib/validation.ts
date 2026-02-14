@@ -26,9 +26,7 @@ export const AgentRegistrationSchema = z.object({
   active: z.boolean().default(true),
   x402Support: z.boolean().optional(),
   supportedTrust: z
-    .array(z.enum(["reputation", "cryptoEconomic", "teeAttestation"], {
-      errorMap: () => ({ message: "Supported trust types are: reputation, cryptoEconomic, teeAttestation" }),
-    }))
+    .array(z.enum(["reputation", "cryptoEconomic", "teeAttestation"], "Supported trust types are: reputation, cryptoEconomic, teeAttestation"))
     .optional(),
   registrations: z
     .array(
