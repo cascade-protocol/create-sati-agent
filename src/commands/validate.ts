@@ -1,11 +1,11 @@
 import { buildCommand } from "@stricli/core";
 import pc from "picocolors";
 import { findRegistrationFile, readRegistrationFile } from "../lib/config.js";
-import { AgentRegistrationSchema } from "../lib/validation.js";
+import { validateERC8004RegistrationFile } from "../lib/erc8004-validation.js";
 
 export const validateCommand = buildCommand({
   docs: {
-    brief: "Validate agent-registration.json against schema",
+    brief: "Validate agent-registration.json against ERC-8004 spec",
   },
   parameters: {
     flags: {},
@@ -28,25 +28,33 @@ export const validateCommand = buildCommand({
     // Load and validate
     try {
       const data = readRegistrationFile(filePath);
-      const result = AgentRegistrationSchema.safeParse(data);
+      const errors = validateERC8004RegistrationFile(data);
 
-      if (!result.success) {
+      if (errors.length > 0) {
         console.log(pc.red("✗ Validation failed:"));
         console.log();
-        for (const error of result.error.errors) {
-          console.log(pc.red(`  • ${error.path.join(".")}: ${error.message}`));
+        for (const error of errors) {
+          console.log(pc.red(`  • ${error.field}: ${error.message}`));
         }
+        console.log();
+        console.log(pc.dim("📖 ERC-8004 spec: https://eips.ethereum.org/EIPS/eip-8004"));
         console.log();
         process.exit(1);
       }
 
-      console.log(pc.green("✓ Valid agent registration"));
+      // Type assertion for accessing properties safely
+      const file = data as Record<string, unknown>;
+
+      console.log(pc.green("✓ Valid ERC-8004 agent registration"));
       console.log();
       console.log(pc.dim("Agent details:"));
-      console.log(pc.dim(`  Name: ${result.data.name}`));
-      console.log(pc.dim(`  Description: ${result.data.description.slice(0, 60)}...`));
-      if (result.data.services?.length) {
-        console.log(pc.dim(`  Services: ${result.data.services.length} endpoint(s)`));
+      console.log(pc.dim(`  Name: ${file.name}`));
+      if (typeof file.description === 'string') {
+        const desc = file.description.length > 60 ? file.description.slice(0, 60) + '...' : file.description;
+        console.log(pc.dim(`  Description: ${desc}`));
+      }
+      if (Array.isArray(file.services) && file.services.length > 0) {
+        console.log(pc.dim(`  Services: ${file.services.length} endpoint(s)`));
       }
       console.log();
       console.log(pc.dim("Ready to publish:"));

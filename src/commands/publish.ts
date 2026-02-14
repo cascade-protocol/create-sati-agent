@@ -50,7 +50,7 @@ async function ensureFunding(
   network: "devnet" | "mainnet",
   isJson: boolean | undefined,
 ): Promise<number> {
-  const s = !isJson ? spinner() : null;
+  let s = !isJson ? spinner() : null;
   s?.start("Checking balance...");
 
   const sol = await getBalance(signer, network);
@@ -99,6 +99,14 @@ async function ensureFunding(
     }
 
     s?.stop(pc.dim(`Funded: +0.01 SOL (${result.signature?.slice(0, 8)}...)`));
+    
+    // Wait for transaction confirmation (devnet is usually fast, but not instant)
+    if (!isJson) {
+      s = spinner();
+      s.start("Waiting for confirmation...");
+    }
+    await new Promise(resolve => setTimeout(resolve, 3000));
+    s?.stop(pc.dim("Confirmed"));
     
     // Return new balance
     return await getBalance(signer, network);
@@ -253,7 +261,8 @@ export const publishCommand = buildCommand({
       if (!isJson) {
         log.error("No Solana keypair found");
         console.log();
-        console.log(`  Run: ${pc.cyan("npx create-sati-agent setup")}`);
+        console.log(`  Run: ${pc.cyan("npx create-sati-agent init")}`);
+        console.log(`  This will create a keypair at ~/.config/solana/id.json`);
         console.log();
       }
       throw new Error("Keypair required");
@@ -497,9 +506,15 @@ export const publishCommand = buildCommand({
         if (errorMsg.includes("insufficient") || errorMsg.includes("balance")) {
           if (!isJson) {
             console.log();
-            log.error("Insufficient SOL in wallet");
+            log.error("Insufficient SOL for transaction");
             console.log();
-            console.log(`  Run: ${pc.cyan(`npx create-sati-agent setup --network ${flags.network}`)}`);
+            if (flags.network === "devnet") {
+              console.log(`  The automatic faucet may have failed or your balance is too low`);
+              console.log(`  Try: https://faucet.solana.com`);
+            } else {
+              console.log(`  Send ~0.01 SOL to your wallet`);
+              console.log(`  Check balance: solana balance ~/.config/solana/id.json`);
+            }
             console.log();
           }
           process.exit(1);

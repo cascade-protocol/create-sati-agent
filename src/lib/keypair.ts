@@ -11,7 +11,8 @@ export async function loadKeypair(keypairPath?: string): Promise<KeyPairSigner> 
   if (!fs.existsSync(resolved)) {
     throw new Error(
       `Keypair not found: ${resolved}\n\n` +
-        `Run: ${pc.cyan("npx create-sati-agent setup")}\n\n` +
+        `Run: ${pc.cyan("npx create-sati-agent init")}\n` +
+        `This will create a keypair at ${DEFAULT_KEYPAIR_PATH}\n\n` +
         `Or generate manually: solana-keygen new`,
     );
   }
