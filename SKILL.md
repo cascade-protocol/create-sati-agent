@@ -22,7 +22,7 @@ npx create-sati-agent init
 ```
 Creates `agent-registration.json` template. Fill in your agent's name, description, image, and service endpoints.
 
-**Tip:** Run `npx create-sati-agent validate` to check your file before publishing.
+**Tip:** Run `npx create-sati-agent publish --dry-run` to validate before publishing.
 
 ### 2. Publish on-chain
 ```bash

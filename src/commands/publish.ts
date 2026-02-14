@@ -39,6 +39,7 @@ interface PublishFlags {
   keypair?: string;
   network: "devnet" | "mainnet";
   json?: boolean;
+  dryRun?: boolean;
 }
 
 const NETWORK_FOR_CHAIN = Object.fromEntries(
@@ -224,6 +225,11 @@ export const publishCommand = buildCommand({
         brief: "Output raw JSON",
         optional: true,
       },
+      dryRun: {
+        kind: "boolean",
+        brief: "Validate registration file without publishing",
+        optional: true,
+      },
     },
     positional: { kind: "tuple", parameters: [] },
   },
@@ -250,8 +256,35 @@ export const publishCommand = buildCommand({
           console.log(`  ${pc.red("✗")} ${err.field}: ${err.message}`);
         });
         console.log();
+        console.log(pc.dim("📖 ERC-8004 spec: https://eips.ethereum.org/EIPS/eip-8004"));
+        console.log();
       }
       throw new Error("Validation failed");
+    }
+
+    // Dry-run mode: validate only, then exit
+    if (flags.dryRun) {
+      if (!isJson) {
+        console.log(pc.green("✓ Valid ERC-8004 agent registration"));
+        console.log();
+        const file = rawData as Record<string, unknown>;
+        console.log(pc.dim("Agent details:"));
+        console.log(pc.dim(`  Name: ${file.name}`));
+        if (typeof file.description === 'string') {
+          const desc = file.description.length > 60 ? file.description.slice(0, 60) + '...' : file.description;
+          console.log(pc.dim(`  Description: ${desc}`));
+        }
+        if (Array.isArray(file.services) && file.services.length > 0) {
+          console.log(pc.dim(`  Services: ${file.services.length} endpoint(s)`));
+        }
+        console.log();
+        console.log(pc.dim("Ready to publish:"));
+        console.log(pc.cyan(`  npx create-sati-agent publish --network ${flags.network}`));
+        console.log();
+      } else {
+        console.log(JSON.stringify({ valid: true, file: rawData }, null, 2));
+      }
+      return;
     }
     
     const data = rawData as Record<string, unknown>;
