@@ -12,6 +12,29 @@ import { AgentRegistrationSchema } from "../lib/validation.js";
 const FAUCET_URL = "https://sati.cascade.fyi/api/faucet";
 const MIN_BALANCE_SOL = 0.007;
 
+async function checkEndpoint(url: string, name: string): Promise<boolean> {
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 3000);
+    const res = await fetch(url, { 
+      signal: controller.signal,
+      headers: { 'User-Agent': 'create-sati-agent' }
+    });
+    clearTimeout(timeout);
+    return res.ok || res.status === 404; // 404 is fine, means server exists
+  } catch {
+    return false;
+  }
+}
+
+async function getBalance(signer: KeyPairSigner, network: "devnet" | "mainnet"): Promise<number> {
+  const rpcUrl = network === "devnet" ? "https://api.devnet.solana.com" : "https://api.mainnet-beta.solana.com";
+  const rpc = createSolanaRpc(rpcUrl);
+  const addr = address(signer.address);
+  const { value: balance } = await rpc.getBalance(addr, { commitment: "confirmed" }).send();
+  return Number(balance) / 1_000_000_000;
+}
+
 interface PublishFlags {
   keypair?: string;
   network: "devnet" | "mainnet";
@@ -26,20 +49,15 @@ async function ensureFunding(
   signer: KeyPairSigner,
   network: "devnet" | "mainnet",
   isJson: boolean | undefined,
-): Promise<void> {
-  const rpcUrl = network === "devnet" ? "https://api.devnet.solana.com" : "https://api.mainnet-beta.solana.com";
-  const rpc = createSolanaRpc(rpcUrl);
-
+): Promise<number> {
   const s = !isJson ? spinner() : null;
   s?.start("Checking balance...");
 
-  const addr = address(signer.address);
-  const { value: balance } = await rpc.getBalance(addr, { commitment: "confirmed" }).send();
-  const sol = Number(balance) / 1_000_000_000;
+  const sol = await getBalance(signer, network);
 
   if (sol >= MIN_BALANCE_SOL) {
     s?.stop(pc.dim(`Balance: ${sol.toFixed(4)} SOL`));
-    return;
+    return sol;
   }
 
   // Insufficient balance
@@ -81,6 +99,9 @@ async function ensureFunding(
     }
 
     s?.stop(pc.dim(`Funded: +0.01 SOL (${result.signature?.slice(0, 8)}...)`));
+    
+    // Return new balance
+    return await getBalance(signer, network);
   } catch (error) {
     s?.stop(pc.red("Faucet request failed"));
     if (!isJson) {
@@ -237,8 +258,35 @@ export const publishCommand = buildCommand({
       throw new Error("Keypair required");
     }
 
+    // Validate endpoints before publishing
+    if (!isJson && services && services.length > 0) {
+      const s = spinner();
+      s.start("Validating endpoints...");
+      
+      const warnings: string[] = [];
+      for (const svc of services) {
+        const reachable = await checkEndpoint(svc.endpoint, svc.name);
+        if (!reachable) {
+          warnings.push(`${svc.name}: ${svc.endpoint}`);
+        }
+      }
+      
+      if (warnings.length > 0) {
+        s.stop(pc.yellow("⚠ Some endpoints unreachable"));
+        console.log();
+        for (const w of warnings) {
+          log.warn(w);
+        }
+        console.log();
+        console.log(pc.dim("This is OK - endpoints will be retried later"));
+        console.log();
+      } else {
+        s.stop(pc.dim("✓ All endpoints reachable"));
+      }
+    }
+
     // Ensure wallet has sufficient balance (airdrop on devnet if needed)
-    await ensureFunding(signer, flags.network, isJson);
+    const balanceBefore = await ensureFunding(signer, flags.network, isJson);
 
     {
       const s = !isJson ? spinner() : null;
@@ -302,9 +350,21 @@ export const publishCommand = buildCommand({
             image,
           );
 
+          // Get final balance and calculate cost
+          const balanceAfter = await getBalance(signer, flags.network);
+          const cost = balanceBefore - balanceAfter;
+
           console.log();
           console.log(formatRegistration({ hash: handle.hash, agentId: satiReg.agentId }));
           console.log();
+          
+          // Cost breakdown
+          if (cost > 0) {
+            console.log(pc.dim(`Transaction cost: ${cost.toFixed(6)} SOL`));
+            console.log(pc.dim(`Remaining balance: ${balanceAfter.toFixed(4)} SOL`));
+            console.log();
+          }
+
           outro(pc.dim("On-chain identity updated"));
         } else {
           // New registration
@@ -367,10 +427,38 @@ export const publishCommand = buildCommand({
             image,
           );
 
+          // Get final balance and calculate cost
+          const balanceAfter = await getBalance(signer, flags.network);
+          const cost = balanceBefore - balanceAfter;
+
           console.log();
           console.log(formatRegistration({ hash: handle.hash, agentId }));
           console.log();
-          outro(pc.dim("Your agent identity is now on Solana"));
+          
+          // Cost breakdown
+          if (cost > 0) {
+            console.log(pc.dim(`Transaction cost: ${cost.toFixed(6)} SOL`));
+            console.log(pc.dim(`Remaining balance: ${balanceAfter.toFixed(4)} SOL`));
+            console.log();
+          }
+
+          // Explorer link
+          const network = flags.network === "devnet" ? "devnet" : "mainnet-beta";
+          const agentAddress = agentId?.split(':').pop();
+          if (agentAddress) {
+            console.log(pc.dim("View on Solana Explorer:"));
+            console.log(pc.cyan(`  https://explorer.solana.com/address/${agentAddress}?cluster=${network}`));
+            console.log();
+          }
+
+          // Next steps
+          console.log(pc.dim("Next steps:"));
+          console.log(pc.dim("  • Update info:"), pc.cyan("npx create-sati-agent publish"));
+          console.log(pc.dim("  • Check status:"), pc.cyan("npx create-sati-agent status"));
+          console.log(pc.dim("  • Discover others:"), pc.cyan("npx create-sati-agent discover"));
+          console.log();
+          
+          outro(pc.green("Your agent identity is now on Solana"));
         }
       } catch (error) {
         s?.stop(pc.red(isUpdate ? "Update failed" : "Registration failed"));
