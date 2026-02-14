@@ -8,18 +8,21 @@ import { createKeyPairSignerFromBytes } from "@solana/kit";
 import { REGISTRATION_FILE } from "../lib/config.js";
 
 const TEMPLATE = {
+  type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   name: "MyAgent",
-  description: "A helpful AI agent that does X, Y, and Z",
+  description: "A helpful AI agent that does X, Y, and Z. Explain what your agent does, how it works, and what problems it solves.",
   image: "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
   services: [
     {
       name: "MCP",
       endpoint: "https://myagent.com/mcp",
-    },
+      version: "2025-06-18",
+      mcpTools: []
+    }
   ],
-  active: true,
-  x402Support: true,
   supportedTrust: ["reputation"],
+  active: true,
+  x402Support: true
 };
 
 const KEYPAIR_PATH = path.join(os.homedir(), ".config", "solana", "id.json");
@@ -88,14 +91,20 @@ export const initCommand = buildCommand({
     console.log(pc.green("✓ Created agent-registration.json"));
     console.log();
     console.log(pc.dim("Required fields:"));
-    console.log(pc.dim("  • name: 1-32 characters"));
-    console.log(pc.dim("  • description: 10-500 characters"));
-    console.log(pc.dim("  • image: Valid URL (or use generated avatar)"));
+    console.log(pc.dim("  • type: ERC-8004 spec URL (don't change)"));
+    console.log(pc.dim("  • name: Clear, memorable agent name"));
+    console.log(pc.dim("  • description: What your agent does, how it works, what problems it solves"));
+    console.log(pc.dim("  • image: High-quality PNG/SVG/WebP URL"));
     console.log();
-    console.log(pc.dim("Optional fields:"));
-    console.log(pc.dim("  • services: Array of {name, endpoint} objects"));
-    console.log(pc.dim("  • x402Support: true if you implement x402"));
-    console.log(pc.dim("  • supportedTrust: [\"reputation\", \"cryptoEconomic\", \"teeAttestation\"]"));
+    console.log(pc.dim("Service types (add to services array):"));
+    console.log(pc.dim("  • MCP - Model Context Protocol (mcpTools array)"));
+    console.log(pc.dim("  • A2A - Agent-to-Agent protocol (a2aSkills array)"));
+    console.log(pc.dim("  • OASF - Skills & domains taxonomy (skills, domains arrays)"));
+    console.log(pc.dim("  • ENS - Ethereum Name Service"));
+    console.log(pc.dim("  • DID - Decentralized Identifier"));
+    console.log(pc.dim("  • agentWallet - Payment address (eip155:chainId:address)"));
+    console.log();
+    console.log(pc.dim("Trust models: reputation, crypto-economic, tee-attestation"));
     console.log();
     console.log(pc.dim("Edit the file, then:"));
     console.log(pc.cyan("  npx create-sati-agent publish --network devnet"));

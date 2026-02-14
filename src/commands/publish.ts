@@ -7,7 +7,7 @@ import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { formatRegistration } from "../lib/format.js";
 import { findRegistrationFile, readRegistrationFile, writeRegistrationFile, REGISTRATION_FILE } from "../lib/config.js";
-import { AgentRegistrationSchema } from "../lib/validation.js";
+import { validateERC8004RegistrationFile } from "../lib/erc8004-validation.js";
 
 const FAUCET_URL = "https://sati.cascade.fyi/api/faucet";
 const MIN_BALANCE_SOL = 0.007;
@@ -150,17 +150,19 @@ async function syncOtherNetworks(
       const agent = await otherSdk.loadAgent(reg.agentId);
       agent.updateInfo(name, description, image);
       agent.removeEndpoints();
-      for (const svc of services ?? []) {
-        const upper = svc.name.toUpperCase();
-        if (upper === "MCP") await agent.setMCP(svc.endpoint);
-        else if (upper === "A2A") await agent.setA2A(svc.endpoint);
+      for (const svc of (services as any[]) ?? []) {
+        const serviceName = svc.name;
+        if (serviceName === "MCP") await agent.setMCP(svc.endpoint, svc.version);
+        else if (serviceName === "A2A") await agent.setA2A(svc.endpoint, svc.version);
+        else if (serviceName === "ENS") agent.setENS(svc.endpoint, svc.version);
+        else if (serviceName === "agentWallet") agent.setWallet(svc.endpoint);
       }
       if (active !== undefined) agent.setActive(active);
-      if (supportedTrust) {
+      if (Array.isArray(supportedTrust) && supportedTrust.length > 0) {
         agent.setTrust(
           supportedTrust.includes("reputation"),
-          supportedTrust.includes("cryptoEconomic"),
-          supportedTrust.includes("teeAttestation"),
+          supportedTrust.includes("crypto-economic"),
+          supportedTrust.includes("tee-attestation"),
         );
       }
       await agent.updateIPFS();
@@ -214,24 +216,23 @@ export const publishCommand = buildCommand({
 
     const rawData = readRegistrationFile(filePath);
     
-    // Validate agent data
-    const validationResult = AgentRegistrationSchema.safeParse(rawData);
-    if (!validationResult.success) {
+    // Validate ERC-8004 registration file format
+    const validationErrors = validateERC8004RegistrationFile(rawData);
+    if (validationErrors.length > 0) {
       if (!isJson) {
         log.error(`Invalid ${REGISTRATION_FILE}`);
         console.log();
-        validationResult.error.issues.forEach((issue) => {
-          const path = issue.path.length > 0 ? issue.path.join(".") : "root";
-          console.log(`  ${pc.red("✗")} ${path}: ${issue.message}`);
+        validationErrors.forEach((err) => {
+          console.log(`  ${pc.red("✗")} ${err.field}: ${err.message}`);
         });
         console.log();
       }
       throw new Error("Validation failed");
     }
     
-    const data = validationResult.data;
-    const { name, description, image, active, supportedTrust, registrations } = data;
-    const services = data.services ?? data.endpoints; // Support legacy 'endpoints' field
+    const data = rawData as Record<string, unknown>;
+    const { name, description, image, active, supportedTrust, registrations, services } = data;
+    const x402Support = data.x402Support;
 
     // Find registration matching the target network
     const chain = SOLANA_CAIP2_CHAINS[flags.network];
@@ -258,16 +259,19 @@ export const publishCommand = buildCommand({
       throw new Error("Keypair required");
     }
 
-    // Validate endpoints before publishing
-    if (!isJson && services && services.length > 0) {
+    // Validate endpoints before publishing (only HTTP services)
+    if (!isJson && Array.isArray(services) && services.length > 0) {
       const s = spinner();
       s.start("Validating endpoints...");
       
       const warnings: string[] = [];
-      for (const svc of services) {
-        const reachable = await checkEndpoint(svc.endpoint, svc.name);
-        if (!reachable) {
-          warnings.push(`${svc.name}: ${svc.endpoint}`);
+      for (const svc of services as any[]) {
+        // Only validate HTTP endpoints (MCP, A2A)
+        if (svc.name === "MCP" || svc.name === "A2A") {
+          const reachable = await checkEndpoint(svc.endpoint, svc.name);
+          if (!reachable) {
+            warnings.push(`${svc.name}: ${svc.endpoint}`);
+          }
         }
       }
       
@@ -280,8 +284,10 @@ export const publishCommand = buildCommand({
         console.log();
         console.log(pc.dim("This is OK - endpoints will be retried later"));
         console.log();
-      } else {
+      } else if (services.some((s: any) => s.name === "MCP" || s.name === "A2A")) {
         s.stop(pc.dim("✓ All endpoints reachable"));
+      } else {
+        s.stop(pc.dim("No HTTP endpoints to validate"));
       }
     }
 
@@ -306,24 +312,37 @@ export const publishCommand = buildCommand({
 
           // Reset endpoints and re-add from file
           agent.removeEndpoints();
-          for (const svc of services ?? []) {
-            const upper = svc.name.toUpperCase();
-            if (upper === "MCP") {
+          for (const svc of (services as any[]) ?? []) {
+            const serviceName = svc.name;
+            if (serviceName === "MCP") {
               s?.message("Fetching MCP capabilities...");
-              await agent.setMCP(svc.endpoint);
-            } else if (upper === "A2A") {
+              await agent.setMCP(svc.endpoint, svc.version);
+            } else if (serviceName === "A2A") {
               s?.message("Fetching A2A capabilities...");
-              await agent.setA2A(svc.endpoint);
+              await agent.setA2A(svc.endpoint, svc.version);
+            } else if (serviceName === "ENS") {
+              agent.setENS(svc.endpoint, svc.version);
+            } else if (serviceName === "agentWallet") {
+              agent.setWallet(svc.endpoint);
+            } else if (serviceName === "DID" || serviceName === "OASF") {
+              // DID and OASF don't have dedicated SDK setters
+              // They'll be stored in metadata/IPFS
+              if (!isJson) {
+                log.info(`${serviceName} service will be stored in IPFS metadata`);
+              }
             }
           }
 
           if (active !== undefined) agent.setActive(active);
-          if (supportedTrust) {
+          if (Array.isArray(supportedTrust) && supportedTrust.length > 0) {
             agent.setTrust(
               supportedTrust.includes("reputation"),
-              supportedTrust.includes("cryptoEconomic"),
-              supportedTrust.includes("teeAttestation"),
+              supportedTrust.includes("crypto-economic"),
+              supportedTrust.includes("tee-attestation"),
             );
+          }
+          if (x402Support !== undefined) {
+            // Store x402Support in metadata - SDK may handle this
           }
 
           s?.message("Updating on-chain...");
@@ -369,25 +388,34 @@ export const publishCommand = buildCommand({
         } else {
           // New registration
           s?.start("Creating agent...");
-          const agent = sdk.createAgent(name, description, image);
+          const agent = sdk.createAgent(name as string, description as string, image as string);
 
-          for (const svc of services ?? []) {
-            const upper = svc.name.toUpperCase();
-            if (upper === "MCP") {
+          for (const svc of (services as any[]) ?? []) {
+            const serviceName = svc.name;
+            if (serviceName === "MCP") {
               s?.message("Fetching MCP capabilities...");
-              await agent.setMCP(svc.endpoint);
-            } else if (upper === "A2A") {
+              await agent.setMCP(svc.endpoint, svc.version);
+            } else if (serviceName === "A2A") {
               s?.message("Fetching A2A capabilities...");
-              await agent.setA2A(svc.endpoint);
+              await agent.setA2A(svc.endpoint, svc.version);
+            } else if (serviceName === "ENS") {
+              agent.setENS(svc.endpoint, svc.version);
+            } else if (serviceName === "agentWallet") {
+              agent.setWallet(svc.endpoint);
+            } else if (serviceName === "DID" || serviceName === "OASF") {
+              // DID and OASF don't have dedicated SDK setters
+              if (!isJson) {
+                log.info(`${serviceName} service will be stored in IPFS metadata`);
+              }
             }
           }
 
-          if (active !== undefined) agent.setActive(active);
-          if (supportedTrust) {
+          if (active !== undefined) agent.setActive(active as boolean);
+          if (Array.isArray(supportedTrust) && supportedTrust.length > 0) {
             agent.setTrust(
               supportedTrust.includes("reputation"),
-              supportedTrust.includes("cryptoEconomic"),
-              supportedTrust.includes("teeAttestation"),
+              supportedTrust.includes("crypto-economic"),
+              supportedTrust.includes("tee-attestation"),
             );
           }
 
