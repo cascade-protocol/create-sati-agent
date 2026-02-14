@@ -74,16 +74,31 @@ export const initCommand = buildCommand({
       fullKeypair.set(pubKey, 32);
 
       fs.mkdirSync(path.dirname(KEYPAIR_PATH), { recursive: true });
-      fs.writeFileSync(KEYPAIR_PATH, JSON.stringify(Array.from(fullKeypair)), "utf-8");
+      // Issue #1: Create keypair with owner-only permissions (0o600)
+      fs.writeFileSync(KEYPAIR_PATH, JSON.stringify(Array.from(fullKeypair)), {
+        mode: 0o600,
+        encoding: "utf-8",
+      });
 
       const signer = await createKeyPairSignerFromBytes(fullKeypair);
       address = signer.address;
 
-      console.log(pc.green("✓ Created keypair"));
-      console.log(pc.dim("  Path:"), KEYPAIR_PATH);
+      console.log(pc.green("✓ Created new Solana keypair"));
+      console.log(pc.dim("  Location:"), KEYPAIR_PATH);
       console.log(pc.dim("  Address:"), address);
+      console.log();
+      console.log(pc.yellow("⚠️  Keep this keypair file safe - it controls your agent"));
     } else {
-      console.log(pc.dim("✓ Keypair exists:"), KEYPAIR_PATH);
+      // Issue #9: Warn about reusing existing keypair
+      if (!flags.force) {
+        console.log(pc.yellow(`⚠️  Keypair already exists at ${KEYPAIR_PATH}`));
+        console.log();
+        console.log(pc.dim("Using existing keypair. To create a new one:"));
+        console.log(pc.cyan("  npx create-sati-agent init --force"));
+        console.log();
+      } else {
+        console.log(pc.dim("✓ Using existing keypair:"), KEYPAIR_PATH);
+      }
     }
 
     console.log();

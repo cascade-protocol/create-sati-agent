@@ -368,6 +368,12 @@ export const publishCommand = buildCommand({
           // Update existing agent on this network
           const satiReg = existingReg;
 
+          if (!isJson) {
+            console.log(pc.cyan(`ℹ  Updating existing agent on ${flags.network}`));
+            console.log(pc.dim(`  Agent ID: ${satiReg.agentId}`));
+            console.log();
+          }
+
           s?.start("Loading agent...");
           // Construct CAIP-2 agentId from mint + chain (registrations stores just mint per ERC-8004)
           const agentId = `${chain}:${satiReg.agentId}`;
@@ -455,6 +461,11 @@ export const publishCommand = buildCommand({
           outro(pc.dim("On-chain identity updated"));
         } else {
           // New registration
+          if (!isJson) {
+            console.log(pc.cyan(`ℹ  Creating new agent on ${flags.network}`));
+            console.log();
+          }
+
           s?.start("Creating agent...");
           const agent = sdk.createAgent(name, description, image);
 
@@ -487,7 +498,10 @@ export const publishCommand = buildCommand({
             );
           }
 
-          s?.message("Registering on-chain...");
+          s?.message("Uploading metadata to IPFS...");
+          if (!isJson) {
+            console.log(pc.yellow("⚠️  IPFS data is permanent and publicly accessible"));
+          }
           const handle = await agent.registerIPFS();
           const mint = agent.identity?.mint;
 
@@ -563,6 +577,27 @@ export const publishCommand = buildCommand({
 
         // Better error messages
         const errorMsg = error instanceof Error ? error.message.toLowerCase() : String(error).toLowerCase();
+
+        // Check for permission denied (wrong keypair)
+        if (
+          (errorMsg.includes("simulation") && errorMsg.includes("failed")) ||
+          errorMsg.includes("unauthorized") ||
+          errorMsg.includes("signer")
+        ) {
+          if (!isJson && isUpdate) {
+            console.log();
+            log.error("Permission denied: You don't own this agent");
+            console.log();
+            console.log(pc.dim("The agent in agent-registration.json was created by a different keypair."));
+            console.log(pc.dim("You can only update agents you own."));
+            console.log();
+            console.log("Solutions:");
+            console.log(pc.dim("  1. Use the correct keypair: ") + pc.cyan("--keypair /path/to/original/keypair.json"));
+            console.log(pc.dim("  2. Create a new agent: ") + pc.cyan("npx create-sati-agent init --force"));
+            console.log();
+          }
+          process.exit(1);
+        }
 
         if (errorMsg.includes("insufficient") || errorMsg.includes("balance")) {
           if (!isJson) {

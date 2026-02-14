@@ -61,9 +61,36 @@ export const infoCommand = buildCommand({
         process.exit(1);
       }
 
+      // Support both full CAIP-2 format (solana:....:mint) and just the mint address
+      let mintAddress = mint;
+      if (mint.includes(":")) {
+        // Extract mint from full CAIP-2 format
+        const parts = mint.split(":");
+        mintAddress = parts[parts.length - 1];
+        if (!flags.network) {
+          console.log(pc.dim("ℹ  Detected full agent ID format, extracting mint address"));
+        }
+      }
+
+      // Validate mint address format (Solana addresses are 32-44 base58 characters)
+      if (mintAddress.length < 32 || mintAddress.length > 44 || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(mintAddress)) {
+        console.error(pc.red("Error: Invalid Solana address format"));
+        console.log();
+        console.log(pc.dim("Solana addresses are 32-44 characters using base58 encoding"));
+        console.log(pc.dim("Valid characters: 1-9, A-Z, a-z (excluding 0, O, I, l)"));
+        console.log();
+        console.log("Examples:");
+        console.log(pc.cyan("  npx create-sati-agent info AK2iXnJR... --network devnet"));
+        console.log(
+          pc.cyan("  npx create-sati-agent info solana:EtWT...:AK2iXnJR... --network devnet") +
+            pc.dim(" (full format)"),
+        );
+        process.exit(1);
+      }
+
       const sdk = createSdk(flags.network);
       const chain = SOLANA_CAIP2_CHAINS[flags.network];
-      const agentId = formatSatiAgentId(mint, chain);
+      const agentId = formatSatiAgentId(mintAddress, chain);
 
       if (flags.json) {
         const agent = await sdk.getAgent(agentId);
