@@ -82,8 +82,28 @@ export function formatFeedbackList(items: Feedback[]): string {
     const tag = fb.tags[0] ? pc.yellow(fb.tags[0]) : pc.dim("untagged");
     const value = fb.value !== undefined ? pc.bold(String(fb.value)) : pc.dim("--");
     const reviewer = fb.reviewer ? truncateAddress(fb.reviewer, 4) : pc.dim("anonymous");
+    
+    // Format timestamp if available
+    let timestamp = "";
+    if (fb.timestamp) {
+      const date = new Date(fb.timestamp * 1000);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      
+      if (diffDays === 0) {
+        timestamp = pc.dim("today");
+      } else if (diffDays === 1) {
+        timestamp = pc.dim("yesterday");
+      } else if (diffDays < 7) {
+        timestamp = pc.dim(`${diffDays}d ago`);
+      } else {
+        timestamp = pc.dim(date.toLocaleDateString());
+      }
+    }
 
-    lines.push(`  ${tag} ${value}  ${pc.dim("by")} ${reviewer}`);
+    const tagInfo = fb.tags.length > 1 ? pc.dim(` (${fb.tags.slice(1).join(", ")})`) : "";
+    lines.push(`  ${tag}${tagInfo} ${value}  ${pc.dim("by")} ${reviewer}  ${timestamp}`);
   }
 
   return lines.join("\n");

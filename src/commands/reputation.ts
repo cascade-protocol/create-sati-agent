@@ -3,11 +3,12 @@ import { intro, outro, spinner } from "@clack/prompts";
 import pc from "picocolors";
 import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
 import { createSdk } from "../lib/sdk.js";
-import { formatReputation, truncateAddress } from "../lib/format.js";
+import { formatReputation, formatFeedbackList, truncateAddress } from "../lib/format.js";
 
 interface ReputationFlags {
   tag1?: string;
   tag2?: string;
+  verbose?: boolean;
   network: "devnet" | "mainnet";
   json?: boolean;
 }
@@ -28,6 +29,11 @@ export const reputationCommand = buildCommand({
         kind: "parsed",
         parse: String,
         brief: "Filter by secondary tag",
+        optional: true,
+      },
+      verbose: {
+        kind: "boolean",
+        brief: "Show individual reviews with timestamps",
         optional: true,
       },
       network: {
@@ -60,7 +66,8 @@ export const reputationCommand = buildCommand({
 
     if (flags.json) {
       const rep = await sdk.getReputationSummary(agentId, flags.tag1, flags.tag2);
-      console.log(JSON.stringify(rep, null, 2));
+      const feedback = flags.verbose ? await sdk.getFeedback(agentId, flags.tag1, flags.tag2) : [];
+      console.log(JSON.stringify({ reputation: rep, feedback }, null, 2));
       return;
     }
 
@@ -80,6 +87,15 @@ export const reputationCommand = buildCommand({
         console.log(`  ${pc.dim("Tag:")}   ${flags.tag1}`);
       }
       console.log();
+
+      // Show individual reviews if verbose
+      if (flags.verbose && rep.count > 0) {
+        const feedback = await sdk.getFeedback(agentId, flags.tag1, flags.tag2);
+        console.log(pc.dim("Individual reviews:"));
+        console.log(formatFeedbackList(feedback));
+        console.log();
+      }
+
       outro(pc.dim(`Network: ${flags.network}`));
     } catch (error) {
       s.stop(pc.red("Failed"));

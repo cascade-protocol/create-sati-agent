@@ -1,14 +1,14 @@
 import { buildCommand, numberParser } from "@stricli/core";
-import { intro, outro, spinner, text, select, isCancel, cancel, log } from "@clack/prompts";
+import { intro, outro, spinner, log } from "@clack/prompts";
 import pc from "picocolors";
 import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 
 interface FeedbackFlags {
-  agent?: string;
-  value?: number;
-  tag1?: string;
+  agent: string;
+  value: number;
+  tag1: string;
   tag2?: string;
   endpoint?: string;
   keypair?: string;
@@ -25,20 +25,17 @@ export const feedbackCommand = buildCommand({
       agent: {
         kind: "parsed",
         parse: String,
-        brief: "Agent mint address to review",
-        optional: true,
+        brief: "Agent mint address to review (required)",
       },
       value: {
         kind: "parsed",
         parse: numberParser,
-        brief: "Score value",
-        optional: true,
+        brief: "Score value (required)",
       },
       tag1: {
         kind: "parsed",
         parse: String,
-        brief: "Primary dimension (starred, reachable, uptime, etc.)",
-        optional: true,
+        brief: "Primary dimension: starred, reachable, uptime, etc. (required)",
       },
       tag2: {
         kind: "parsed",
@@ -79,55 +76,6 @@ export const feedbackCommand = buildCommand({
       intro(pc.cyan("SATI - Give Feedback"));
     }
 
-    let agentMint = flags.agent;
-    let value = flags.value;
-    let tag1 = flags.tag1;
-
-    if (!agentMint) {
-      const result = await text({
-        message: "Agent mint address:",
-        validate: (v) => (v.length < 32 ? "Must be a valid Solana address" : undefined),
-      });
-      if (isCancel(result)) {
-        cancel("Cancelled");
-        process.exit(0);
-      }
-      agentMint = result;
-    }
-
-    if (!tag1) {
-      const result = await select({
-        message: "Feedback category:",
-        options: [
-          { value: "starred", label: "Overall Rating (0-100)" },
-          { value: "reachable", label: "Reachability (0 or 1)" },
-          { value: "uptime", label: "Uptime %" },
-          { value: "responseTime", label: "Response Time (ms)" },
-          { value: "successRate", label: "Success Rate %" },
-        ],
-      });
-      if (isCancel(result)) {
-        cancel("Cancelled");
-        process.exit(0);
-      }
-      tag1 = result as string;
-    }
-
-    if (value === undefined) {
-      const result = await text({
-        message: "Value:",
-        validate: (v) => {
-          const n = Number(v);
-          return Number.isNaN(n) ? "Must be a number" : undefined;
-        },
-      });
-      if (isCancel(result)) {
-        cancel("Cancelled");
-        process.exit(0);
-      }
-      value = Number(result);
-    }
-
     // Load keypair
     let signer;
     try {
@@ -136,7 +84,7 @@ export const feedbackCommand = buildCommand({
       if (!isJson) {
         log.error("No Solana keypair found");
         console.log();
-        console.log(`  Run: ${pc.cyan("npx create-sati-agent setup")}`);
+        console.log(`  Run: ${pc.cyan("npx create-sati-agent init")}`);
         console.log();
       }
       throw new Error("Keypair required");
@@ -147,10 +95,10 @@ export const feedbackCommand = buildCommand({
 
     const sdk = createSdk(flags.network, signer);
     const chain = SOLANA_CAIP2_CHAINS[flags.network];
-    const agentId = formatSatiAgentId(agentMint, chain);
+    const agentId = formatSatiAgentId(flags.agent, chain);
 
     try {
-      const handle = await sdk.giveFeedback(agentId, value, tag1, flags.tag2, flags.endpoint);
+      const handle = await sdk.giveFeedback(agentId, flags.value, flags.tag1, flags.tag2, flags.endpoint);
 
       if (isJson) {
         console.log(JSON.stringify({ txHash: handle.hash, agentId, reviewer: signer.address }, null, 2));
