@@ -83,7 +83,29 @@ export function formatFeedbackList(items: Feedback[]): string {
     const value = fb.value !== undefined ? pc.bold(String(fb.value)) : pc.dim("--");
     const reviewer = fb.reviewer ? truncateAddress(fb.reviewer, 4) : pc.dim("anonymous");
 
-    lines.push(`  ${tag} ${value}  ${pc.dim("by")} ${reviewer}`);
+    // Format timestamp if available (SDK may not expose this yet)
+    let timestamp = "";
+    // Check if timestamp exists on the object (may be added by SDK in future)
+    if ("timestamp" in fb && typeof (fb as { timestamp?: number }).timestamp === "number") {
+      const fbTimestamp = (fb as { timestamp: number }).timestamp;
+      const date = new Date(fbTimestamp * 1000);
+      const now = new Date();
+      const diffMs = now.getTime() - date.getTime();
+      const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+
+      if (diffDays === 0) {
+        timestamp = pc.dim("today");
+      } else if (diffDays === 1) {
+        timestamp = pc.dim("yesterday");
+      } else if (diffDays < 7) {
+        timestamp = pc.dim(`${diffDays}d ago`);
+      } else {
+        timestamp = pc.dim(date.toLocaleDateString());
+      }
+    }
+
+    const tagInfo = fb.tags.length > 1 ? pc.dim(` (${fb.tags.slice(1).join(", ")})`) : "";
+    lines.push(`  ${tag}${tagInfo} ${value}  ${pc.dim("by")} ${reviewer}  ${timestamp}`);
   }
 
   return lines.join("\n");

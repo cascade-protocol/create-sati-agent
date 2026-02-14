@@ -1,125 +1,134 @@
 # create-sati-agent
 
-On-chain identity for AI agents on Solana. Your agent gets a Token-2022 NFT with metadata on IPFS, discoverable by other agents and humans, with on-chain reputation from feedback attestations.
+On-chain identity for AI agents on Solana. Token-2022 NFT + IPFS metadata + reputation system.
 
-Built on [SATI](https://sati.cascade.fyi) (Solana Attestation & Trust Infrastructure). Follows the [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) agent identity standard.
+## Quick Start (Devnet)
 
-## 2-Minute Setup
+```bash
+npx create-sati-agent init     # creates agent-registration.json
+npx create-sati-agent publish  # publishes to devnet (auto-funded)
+```
 
-**1. Create `agent-registration.json` in your project root:**
+**Done.** Your agent has:
+- Token-2022 NFT on Solana
+- Metadata on IPFS (name, description, image, endpoints)
+- On-chain reputation (via feedback attestations)
+- Discoverability (`search` command, SATI registry)
+
+## agent-registration.json
 
 ```json
 {
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   "name": "MyAgent",
-  "description": "AI assistant for code review",
+  "description": "Does X for Y",
   "image": "https://example.com/avatar.png",
+  "properties": {
+    "files": [{"uri": "https://example.com/avatar.png", "type": "image/png"}],
+    "category": "image"
+  },
   "services": [
-    {"name": "MCP", "endpoint": "https://myagent.com/mcp"}
+    {"name": "MCP", "endpoint": "https://myagent.com/mcp", "version": "2025-06-18"},
+    {"name": "A2A", "endpoint": "https://myagent.com/.well-known/agent-card.json", "version": "0.3.0"}
   ],
-  "active": true,
-  "supportedTrust": ["reputation"]
+  "supportedTrust": ["reputation"],
+  "active": false,
+  "x402Support": false,
+  "registrations": []
 }
 ```
 
-**2. Publish on-chain:**
+**Supported services:** `MCP`, `A2A`, `OASF`, `ENS`, `DID`, `agentWallet`
+
+**Service-specific fields:**
+- `MCP`: `mcpTools: []` - list of MCP tools
+- `A2A`: `a2aSkills: []` - list of A2A skills (slash-separated taxonomy)
+- `OASF`: `skills: []`, `domains: []` - standardized capability taxonomies
+
+See [docs/best-practices/](docs/best-practices/) for comprehensive guides.
+
+## Mainnet Deployment
+
+**Security:** The CLI creates a wallet at `~/.config/solana/id.json` for convenience. This is **not secure** for mainnet. Follow this 3-step flow:
+
+### Step 1: Practice on Devnet (optional but recommended)
 
 ```bash
-npx create-sati-agent publish --network devnet
+npx create-sati-agent init
+npx create-sati-agent publish --network devnet  # auto-funded
+npx create-sati-agent info <MINT> --network devnet
 ```
 
-**3. Done.** Your agent now has:
-- A Token-2022 NFT on Solana
-- Metadata on IPFS
-- A `registrations` array written back into the file
-- Discoverability via `npx create-sati-agent discover`
-
-Commit `agent-registration.json` to your repo. Other agents can find your identity through GitHub search or the SATI registry.
-
-## What Gets Created
-
-The CLI builds an [ERC-8004 registration file](https://eips.ethereum.org/EIPS/eip-8004) for your agent containing identity, service endpoints, and trust configuration, uploads it to IPFS, and mints a Token-2022 NFT on Solana pointing to it.
-
-You provide the basics (name, description, image, services). The CLI handles:
-- **MCP endpoint** - if provided, the SDK auto-fetches your tools, prompts, and resources
-- **A2A endpoint** - if provided, the SDK auto-fetches your agent skills from the agent card
-- **Trust model** - defaults to `reputation` (on-chain feedback)
-- **IPFS upload** - handled automatically, no Pinata key needed
-
-## Wallet Setup
-
-You need a funded Solana wallet. Two options:
-
-**Option A: Solana keypair** (direct, recommended for developers)
+### Step 2: Publish on Mainnet
 
 ```bash
-# Generate a keypair if you don't have one
-solana-keygen new
-
-# The CLI uses ~/.config/solana/id.json by default
-npx create-sati-agent publish --network devnet
-
-# Or point to a specific keypair
-npx create-sati-agent publish --keypair ~/my-keypair.json --network devnet
+npx create-sati-agent publish --network mainnet
+# ❌ Error: Insufficient funds. Send ~0.01 SOL to: BrcYS3e3Ld51Sg3YswREtXMtN1pUJzNf1XGUNXsAMNxG
 ```
 
-**Option B: AgentWallet** (custodial, for AI agents without local keys)
-
-If you have [AgentWallet](https://agentwallet.mcpay.tech/skill.md) configured at `~/.agentwallet/config.json`, the CLI uses it automatically. Registration costs $0.30 USDC via [x402](https://www.x402.org/).
-
-The CLI tries the keypair first, then falls back to AgentWallet. If neither is found, it shows setup instructions.
-
-## Update Your Agent
-
-Edit `agent-registration.json` and run `publish` again:
+Send ~0.01 SOL to that address, then:
 
 ```bash
-npx create-sati-agent publish --network devnet
+npx create-sati-agent publish --network mainnet
+# ✅ Agent registered: 2LETZxjxSpEZzHM42Fp6RYrcuxtjLytdVUSgGVAbVrqi
 ```
 
-The CLI detects existing registrations in the file and updates the on-chain URI instead of creating a new agent.
-
-## Other Commands
+### Step 3: Transfer to Secure Wallet
 
 ```bash
-# Check status and get instructions
-npx create-sati-agent
+# Transfer ownership + refund leftover SOL to your secure wallet
+npx create-sati-agent transfer <MINT> \
+  --new-owner <YOUR_SECURE_WALLET> \
+  --refund-sol \
+  --network mainnet
 
-# Discover registered agents
-npx create-sati-agent discover --name "weather" --network devnet
-
-# Get agent details
-npx create-sati-agent info <MINT_ADDRESS> --network devnet
-
-# Check reputation (count + average score)
-npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred
-
-# Give feedback (on-chain attestation, free)
-npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred
-
-# Transfer ownership
-npx create-sati-agent transfer <MINT> --new-owner <ADDRESS>
+# Sends remaining SOL (~0.002) to your secure wallet
+# Temp wallet becomes empty
 ```
 
-All commands support `--json` for machine-readable output and `--network devnet|mainnet` (default: mainnet).
+**Done.** Your agent is now owned by your secure wallet (hardware wallet, multisig, etc.).
+
+**Costs:**
+- Registration: ~0.008 SOL
+- Transfer: ~0.0005 SOL
+- Total: ~0.0085 SOL (~$1.70 at $200/SOL)
+
+## Commands
+
+```bash
+init                    # create template
+publish                 # publish or update agent
+search                  # find agents by name
+info [MINT]             # show agent details + feedback (auto-discovers from agent-registration.json)
+give-feedback           # submit on-chain attestation
+transfer <MINT>         # change ownership
+```
+
+All commands support `--help` for details, `--json` for parseable output, `--network devnet|mainnet`.
+
+**Context-aware commands:**
+- `info` - When run in a directory with `agent-registration.json`, automatically shows all registered agents (devnet + mainnet)
+- `info --network devnet` - Filter to specific network
+- `info <MINT> --network devnet` - Query any agent by mint address
 
 ## Feedback Tags
 
-| tag | Range | Meaning |
-|-----|-------|---------|
-| `starred` | 0-100 | Overall rating |
-| `reachable` | 0 or 1 | Reachability check |
-| `uptime` | 0-100 | Uptime percentage |
-| `responseTime` | ms | Response time |
-| `successRate` | 0-100 | Success rate |
+```bash
+--tag1 starred --value 85       # rating (0-100)
+--tag1 reachable --value 1      # health check (0 or 1)
+--tag1 uptime --value 99        # uptime % (0-100)
+--tag1 responseTime --value 150 # latency (ms)
+--tag1 successRate --value 98   # success % (0-100)
+```
 
-## Colosseum Agent Hackathon
+## Devnet Faucet
 
-Building for the [Colosseum Agent Hackathon](https://colosseum.com/agent-hackathon/skill.md)? Register your agent's on-chain identity:
+Auto-funds wallets on devnet (0.01 SOL). Rate limit: 1 airdrop per 5 minutes.
 
-1. Create `agent-registration.json` in your project root (template above)
-2. Run `npx create-sati-agent publish --network devnet`
-3. Commit the file (includes `registrations` array after publish)
-4. Your agent is now discoverable on-chain
+## Built On
+
+- [SATI](https://sati.cascade.fyi) - Solana Attestation & Trust Infrastructure
+- [ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) - Agent identity standard
 
 ## License
 

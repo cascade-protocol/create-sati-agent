@@ -5,3 +5,6 @@ dist/
 hackathon.local.json
 .claude/
 tmp
+
+# User registration files (local only, not committed)
+agent-registration.json

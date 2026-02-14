@@ -4,7 +4,7 @@ import pc from "picocolors";
 import { createSdk } from "../lib/sdk.js";
 import { formatAgentList } from "../lib/format.js";
 
-interface DiscoverFlags {
+interface SearchFlags {
   name?: string;
   owner?: string;
   limit?: number;
@@ -12,7 +12,7 @@ interface DiscoverFlags {
   json?: boolean;
 }
 
-export const discoverCommand = buildCommand({
+export const searchCommand = buildCommand({
   docs: {
     brief: "Search and list registered agents",
   },
@@ -50,7 +50,7 @@ export const discoverCommand = buildCommand({
     },
     positional: { kind: "tuple", parameters: [] },
   },
-  async func(flags: DiscoverFlags) {
+  async func(flags: SearchFlags) {
     const sdk = createSdk(flags.network);
 
     const filters = {
