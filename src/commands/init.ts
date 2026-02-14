@@ -106,8 +106,12 @@ export const initCommand = buildCommand({
     console.log();
     console.log(pc.dim("Trust models: reputation, crypto-economic, tee-attestation"));
     console.log();
-    console.log(pc.dim("Edit the file, then:"));
-    console.log(pc.cyan("  npx create-sati-agent publish --network devnet"));
+    console.log(pc.dim("Next steps:"));
+    console.log(pc.dim("  1. Edit agent-registration.json with your agent details"));
+    console.log(pc.dim("  2. Run validation (optional):"));
+    console.log(pc.cyan("     npx create-sati-agent validate"));
+    console.log(pc.dim("  3. Publish to devnet:"));
+    console.log(pc.cyan("     npx create-sati-agent publish --network devnet"));
     console.log();
   },
 });

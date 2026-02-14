@@ -6,21 +6,16 @@ Built on [SATI](https://sati.cascade.fyi) (Solana Attestation & Trust Infrastruc
 
 ## Quick Start
 
-### 1. Set up your wallet
-```bash
-npx create-sati-agent setup --network devnet
-```
-
-This creates a Solana keypair at `~/.config/solana/id.json` and funds it with 0.01 SOL (devnet only, via SATI faucet).
-
-### 2. Create your agent profile
+### 1. Create your agent profile
 ```bash
 npx create-sati-agent init
 ```
 
-Interactive wizard that creates `agent-registration.json` in your current directory.
+Creates `agent-registration.json` template in your current directory. Fill in your agent's name, description, image URL, and service endpoints.
 
-### 3. Publish on-chain
+**Tip:** Run `npx create-sati-agent validate` to check your registration file before publishing.
+
+### 2. Publish on-chain
 ```bash
 npx create-sati-agent publish --network devnet
 ```
@@ -32,6 +27,13 @@ npx create-sati-agent publish --network devnet
 - Discoverability via `discover` command
 
 **Total time: ~5 minutes**
+
+The CLI will:
+- Create a Solana keypair at `~/.config/solana/id.json` if you don't have one
+- Auto-fund your wallet on devnet (0.01 SOL via SATI faucet)
+- Upload metadata to IPFS
+- Mint your agent NFT
+- Update `agent-registration.json` with the on-chain registration
 
 Commit `agent-registration.json` to your repo. Other agents can find your identity through GitHub search or the SATI registry.
 
@@ -79,28 +81,28 @@ The CLI detects existing registrations in the file and updates the on-chain URI 
 ## All Commands
 
 ```bash
-# Set up wallet (create keypair + fund devnet)
-npx create-sati-agent setup --network devnet
+# Create agent-registration.json template
+npx create-sati-agent init [--force]
 
-# Create agent-registration.json interactively
-npx create-sati-agent init
+# Validate registration file
+npx create-sati-agent validate
 
 # Publish or update agent on-chain
 npx create-sati-agent publish --network devnet
 
 # Check status and get instructions
-npx create-sati-agent
+npx create-sati-agent status
 
 # Discover registered agents
 npx create-sati-agent discover --name "weather" --network devnet
 
-# Get agent details
+# Get agent details (shows complete on-chain registration JSON)
 npx create-sati-agent info <MINT_ADDRESS> --network devnet
 
 # Check reputation (count + average score)
-npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred
+npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred [--verbose]
 
-# Give feedback (on-chain attestation, free gas)
+# Give feedback (on-chain attestation)
 npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred
 
 # Transfer ownership
@@ -121,30 +123,60 @@ All commands support `--json` for machine-readable output and `--network devnet|
 
 ## Mainnet Deployment
 
-For mainnet, you need to fund your wallet manually (devnet auto-funding doesn't work on mainnet):
+For mainnet, you need to fund your wallet manually:
 
 ```bash
-# Create wallet
-npx create-sati-agent setup --network mainnet
-
-# Send ~0.01 SOL to the address shown
-# Then continue with init and publish
-
+# Create registration file
 npx create-sati-agent init
+
+# Publish will create keypair if needed and show you the address
 npx create-sati-agent publish --network mainnet
 ```
 
+If you don't have SOL, the publish command will fail with:
+```
+Error: Insufficient funds. You need ~0.01 SOL to register an agent.
+Send SOL to: <YOUR_ADDRESS>
+```
+
+Send ~0.01 SOL to that address, then run publish again.
+
 **Costs:**
-- Agent registration: ~0.002 SOL (~$0.40 at $200/SOL)
-- Feedback submission: ~0.000005 SOL (free, just gas)
+- Agent registration: ~0.008 SOL (~$1.60 at $200/SOL)
+- Agent update: ~0.0005 SOL
+- Feedback submission: ~0.000005 SOL (nearly free)
 - Discovery/info/reputation: Free (read-only)
+
+## Troubleshooting
+
+### "Insufficient funds" error
+- **Devnet:** The SATI faucet will auto-fund your wallet during `publish`. If it fails, wait 5 minutes and try again (rate limit).
+- **Mainnet:** Send ~0.01 SOL to your wallet address (shown in the error message).
+
+### "Endpoint not reachable" warning
+- Your MCP/A2A endpoints are validated before publishing. If they're not responding, you'll see a warning.
+- You can still publish, but other agents won't be able to connect to your services.
+- Fix: Make sure your service is running and accessible at the URL you provided.
+
+### Check your wallet balance
+```bash
+solana balance ~/.config/solana/id.json --url devnet
+```
+
+### Verify your agent on-chain
+After publishing, you'll see a Solana Explorer link. Click it to verify your agent NFT and metadata.
+
+### SATI faucet rate limit
+The devnet faucet allows 1 airdrop per 5 minutes per address. If you hit the limit, wait a few minutes and try again.
+
+---
 
 ## Colosseum Agent Hackathon
 
 Building for the [Colosseum Agent Hackathon](https://colosseum.com/agent-hackathon/skill.md)? Register your agent's on-chain identity:
 
-1. Run `npx create-sati-agent setup --network devnet`
-2. Run `npx create-sati-agent init`
+1. Run `npx create-sati-agent init`
+2. Edit `agent-registration.json` with your agent details
 3. Run `npx create-sati-agent publish --network devnet`
 4. Commit `agent-registration.json` (includes `registrations` array after publish)
 5. Your agent is now discoverable on-chain!

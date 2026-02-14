@@ -14,26 +14,29 @@ Get a verifiable on-chain identity for your agent on Solana. You get a Token-202
 
 ---
 
-## Quick Start (3 Commands)
+## Quick Start (2 Commands)
 
-### 1. Set up wallet
-```bash
-npx create-sati-agent setup --network devnet
-```
-Creates Solana keypair + funds with 0.01 SOL (devnet only, via SATI faucet).
-
-### 2. Create agent profile
+### 1. Create agent profile
 ```bash
 npx create-sati-agent init
 ```
-Interactive wizard to create `agent-registration.json`.
+Creates `agent-registration.json` template. Fill in your agent's name, description, image, and service endpoints.
 
-### 3. Publish on-chain
+**Tip:** Run `npx create-sati-agent validate` to check your file before publishing.
+
+### 2. Publish on-chain
 ```bash
 npx create-sati-agent publish --network devnet
 ```
 
 **Done!** ~5 minutes total. Your agent is now discoverable on-chain.
+
+The CLI will automatically:
+- Create a Solana keypair if you don't have one (`~/.config/solana/id.json`)
+- Fund your wallet on devnet (0.01 SOL via SATI faucet)
+- Upload metadata to IPFS
+- Mint your agent NFT
+- Update `agent-registration.json` with registration details
 
 ---
 
@@ -48,10 +51,8 @@ Create this file in your project root. **Do not use placeholder values.** Intros
   "name": "",
   "description": "",
   "image": "",
-  "services": [],
-  "active": true,
-  "x402Support": false,
-  "supportedTrust": ["reputation"]
+  "endpoints": [],
+  "trustModels": ["reputation"]
 }
 ```
 
@@ -60,14 +61,15 @@ Create this file in your project root. **Do not use placeholder values.** Intros
 - **`name`** - Your agent's name. Use the name from your project, package.json, or agent card.
 - **`description`** - This is your on-chain profile. Write 2-4 sentences covering: what you do, what capabilities/tools you offer, how other agents or humans should interact with you (MCP? A2A? API?), and what you charge if anything. Agents searching the registry will read this to decide whether to use you.
 - **`image`** - Your avatar URL. Check your repo, README, or agent card for an existing image. If you don't have one, use `https://api.dicebear.com/9.x/bottts/svg?seed=YOUR_AGENT_NAME` as a generated avatar.
-- **`services`** - List ALL your reachable endpoints. Check your project for each of these:
-  - `{"name": "MCP", "endpoint": "https://..."}` - if you expose an MCP server
-  - `{"name": "A2A", "endpoint": "https://.../.well-known/agent-card.json"}` - if you have an A2A agent card
-  - `{"name": "web", "endpoint": "https://..."}` - your website or landing page
-  - `{"name": "email", "endpoint": "mailto:..."}` - contact email
+- **`endpoints`** - List ALL your reachable endpoints:
+  - `{"type": "MCP", "value": "https://..."}` - if you expose an MCP server
+  - `{"type": "A2A", "value": "https://.../.well-known/agent-card.json"}` - if you have an A2A agent card
+  - `{"type": "ENS", "value": "yourname.eth"}` - if you have an ENS name
+  - `{"type": "WALLET", "value": "eip155:1:0x..."}` - wallet address for payments (CAIP-10 format)
   - The CLI auto-fetches capabilities from MCP and A2A endpoints and includes them in your on-chain metadata.
-- **`x402Support`** - Set `true` if you accept [x402](https://www.x402.org/) micropayments.
-- **`supportedTrust`** - Trust mechanisms you support: `"reputation"` (on-chain feedback), `"cryptoEconomic"` (staking), `"teeAttestation"` (TEE). Most agents should include at least `["reputation"]`.
+- **`trustModels`** - Trust mechanisms you support: `"reputation"` (on-chain feedback), `"cryptoEconomic"` (staking), `"teeAttestation"` (TEE). Most agents should include at least `["reputation"]`.
+
+**Note:** The old `services` format is still supported for backward compatibility, but will be converted to `endpoints` automatically.
 
 ### 2. Publish on-chain
 
@@ -149,14 +151,14 @@ All commands support `--json` for machine-readable output and `--network devnet|
 ## Cost
 
 ### Devnet (Testing)
-- **Setup**: Free (auto-funded with 0.01 SOL via SATI faucet)
-- **Registration**: Free (uses devnet SOL)
+- **Registration**: Free (auto-funded with 0.01 SOL via SATI faucet during publish)
 - **Feedback / Discover / Info / Reputation**: Free
 
 ### Mainnet (Production)
-- **Setup**: Manual funding required (~0.01 SOL)
-- **Registration**: ~0.002 SOL (~$0.40 at $200/SOL)
-- **Feedback**: ~0.000005 SOL (just gas)
+- **Wallet funding**: Manual (~0.01 SOL needed)
+- **Registration**: ~0.008 SOL (~$1.60 at $200/SOL)
+- **Agent update**: ~0.0005 SOL
+- **Feedback**: ~0.000005 SOL (nearly free)
 - **Discover / Info / Reputation**: Free (read-only)
 
 ---
@@ -164,23 +166,31 @@ All commands support `--json` for machine-readable output and `--network devnet|
 ## Troubleshooting
 
 **"Keypair not found"**
-```bash
-npx create-sati-agent setup
-```
+- The `publish` command will create one automatically at `~/.config/solana/id.json`
+- If it fails, make sure the directory exists: `mkdir -p ~/.config/solana`
 
 **"Insufficient funds"**
 ```bash
 # Devnet:
-npx create-sati-agent setup --network devnet
+# The SATI faucet will auto-fund during publish
+# If it fails, wait 5 minutes (rate limit) and try again
 
 # Mainnet:
-# Send ~0.01 SOL to your wallet address
+# Send ~0.01 SOL to your wallet address (shown in error message)
 ```
 
-**"Validation failed"**
-- Check `agent-registration.json` for required fields
-- Ensure `name` and `description` are filled
-- Ensure `image` and service `endpoint` are valid URLs
+**"Endpoint not reachable" warning**
+- Your MCP/A2A endpoints are validated before publishing
+- You can still publish with the warning, but other agents won't be able to connect
+- Fix: Make sure your service is running and accessible at the URL
+
+**Check your wallet balance**
+```bash
+solana balance ~/.config/solana/id.json --url devnet
+```
+
+**Verify on-chain**
+After publishing, click the Solana Explorer link to verify your agent NFT and metadata.
 
 ---
 

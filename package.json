@@ -26,7 +26,15 @@
     "lint:fix": "biome check --write",
     "check": "pnpm type-check && pnpm lint",
     "clean": "rm -rf dist",
-    "prepublishOnly": "pnpm build"
+    "prepublishOnly": "pnpm build",
+    "agent:init": "node dist/bin/cli.js init",
+    "agent:validate": "node dist/bin/cli.js validate",
+    "agent:publish": "node dist/bin/cli.js publish",
+    "agent:status": "node dist/bin/cli.js status",
+    "agent:discover": "node dist/bin/cli.js discover",
+    "agent:info": "node dist/bin/cli.js info",
+    "agent:reputation": "node dist/bin/cli.js reputation",
+    "agent:feedback": "node dist/bin/cli.js feedback"
   },
   "dependencies": {
     "@cascade-fyi/sati-agent0-sdk": "^0.5.0",

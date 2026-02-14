@@ -65,7 +65,9 @@ export const infoCommand = buildCommand({
 
       s.stop("Agent loaded");
       console.log();
-      console.log(formatAgent(agent));
+      console.log(pc.bold("Complete On-Chain Registration:"));
+      console.log();
+      console.log(JSON.stringify(agent, null, 2));
       console.log();
       outro(pc.dim(`Network: ${flags.network}`));
     } catch (error) {
