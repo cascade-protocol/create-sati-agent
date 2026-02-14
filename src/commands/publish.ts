@@ -548,7 +548,7 @@ export const publishCommand = buildCommand({
 
           // Next steps
           console.log(pc.dim("Next steps:"));
-          console.log(pc.dim("  • View your agent:"), pc.cyan(`npx create-sati-agent info ${registeredMint}`));
+          console.log(pc.dim("  • View your agent:"), pc.cyan(`npx create-sati-agent info ${agentAddress}`));
           console.log(pc.dim("  • Search for others:"), pc.cyan("npx create-sati-agent search"));
           console.log(pc.dim("  • Update info:"), pc.cyan("npx create-sati-agent publish"));
           console.log();
