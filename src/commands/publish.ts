@@ -539,9 +539,9 @@ export const publishCommand = buildCommand({
 
           // Next steps
           console.log(pc.dim("Next steps:"));
+          console.log(pc.dim("  • View your agent:"), pc.cyan(`npx create-sati-agent info ${registeredMint}`));
+          console.log(pc.dim("  • Search for others:"), pc.cyan("npx create-sati-agent search"));
           console.log(pc.dim("  • Update info:"), pc.cyan("npx create-sati-agent publish"));
-          console.log(pc.dim("  • Check status:"), pc.cyan("npx create-sati-agent status"));
-          console.log(pc.dim("  • Discover others:"), pc.cyan("npx create-sati-agent discover"));
           console.log();
           
           outro(pc.green("Your agent identity is now on Solana"));

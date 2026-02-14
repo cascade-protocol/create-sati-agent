@@ -90,18 +90,15 @@ npx create-sati-agent publish --dry-run --network devnet
 # Publish or update agent on-chain
 npx create-sati-agent publish --network devnet
 
-# Check status and get instructions
-npx create-sati-agent status
-
-# Discover registered agents
-npx create-sati-agent discover --name "weather" --network devnet
+# Search for registered agents
+npx create-sati-agent search --name "weather" --network devnet
 
 # Get agent details (shows complete on-chain registration JSON + recent feedback)
 npx create-sati-agent info <MINT_ADDRESS> --network devnet
 npx create-sati-agent info <MINT> --limit 100  # Show more feedback (max 1000)
 
 # Give feedback (on-chain attestation)
-npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred
+npx create-sati-agent give-feedback --agent <MINT> --value 85 --tag1 starred
 
 # Transfer ownership
 npx create-sati-agent transfer <MINT> --new-owner <ADDRESS>

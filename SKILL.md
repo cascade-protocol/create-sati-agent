@@ -103,10 +103,10 @@ Edit `agent-registration.json` and run `publish` again. The CLI detects existing
 
 ## Commands
 
-### Discover agents
+### Search for agents
 
 ```bash
-npx create-sati-agent discover --name "weather" --network devnet
+npx create-sati-agent search --name "weather" --network devnet
 ```
 
 ### Get agent details
@@ -118,10 +118,10 @@ npx create-sati-agent info <MINT> --network devnet
 npx create-sati-agent info <MINT> --limit 100  # Show more feedback (default 10, max 1000)
 ```
 
-### Give feedback (free)
+### Give feedback
 
 ```bash
-npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred --network devnet
+npx create-sati-agent give-feedback --agent <MINT> --value 85 --tag1 starred --network devnet
 ```
 
 Recorded as a compressed on-chain attestation. Feedback tags:

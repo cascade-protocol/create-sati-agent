@@ -30,10 +30,9 @@
     "agent:init": "node dist/bin/cli.js init",
     "agent:publish": "node dist/bin/cli.js publish",
     "agent:publish:dry": "node dist/bin/cli.js publish --dry-run",
-    "agent:status": "node dist/bin/cli.js status",
-    "agent:discover": "node dist/bin/cli.js discover",
+    "agent:search": "node dist/bin/cli.js search",
     "agent:info": "node dist/bin/cli.js info",
-    "agent:feedback": "node dist/bin/cli.js feedback"
+    "agent:give-feedback": "node dist/bin/cli.js give-feedback"
   },
   "dependencies": {
     "@cascade-fyi/sati-agent0-sdk": "^0.5.0",

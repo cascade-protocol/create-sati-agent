@@ -1,25 +1,24 @@
 import { buildApplication, buildRouteMap } from "@stricli/core";
 import { initCommand } from "./commands/init.js";
 import { publishCommand } from "./commands/publish.js";
-import { statusCommand } from "./commands/status.js";
-import { discoverCommand } from "./commands/discover.js";
+import { searchCommand } from "./commands/search.js";
 import { infoCommand } from "./commands/info.js";
-import { feedbackCommand } from "./commands/feedback.js";
+import { giveFeedbackCommand } from "./commands/give-feedback.js";
 import { transferCommand } from "./commands/transfer.js";
 
 const routes = buildRouteMap({
   routes: {
     init: initCommand,
     publish: publishCommand,
-    status: statusCommand,
-    discover: discoverCommand,
+    search: searchCommand,
     info: infoCommand,
-    feedback: feedbackCommand,
+    "give-feedback": giveFeedbackCommand,
     transfer: transferCommand,
   },
-  defaultCommand: "status",
   aliases: {
     register: "publish",
+    discover: "search",
+    feedback: "give-feedback",
   },
   docs: {
     brief: "On-chain identity for AI agents on Solana",

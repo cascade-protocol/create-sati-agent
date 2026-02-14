@@ -5,7 +5,7 @@ import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 
-interface FeedbackFlags {
+interface GiveFeedbackFlags {
   agent: string;
   value: number;
   tag1: string;
@@ -16,7 +16,7 @@ interface FeedbackFlags {
   json?: boolean;
 }
 
-export const feedbackCommand = buildCommand({
+export const giveFeedbackCommand = buildCommand({
   docs: {
     brief: "Give feedback on an agent (recorded on-chain)",
   },
@@ -69,7 +69,7 @@ export const feedbackCommand = buildCommand({
     },
     positional: { kind: "tuple", parameters: [] },
   },
-  async func(flags: FeedbackFlags) {
+  async func(flags: GiveFeedbackFlags) {
     const isJson = flags.json;
 
     if (!isJson) {
