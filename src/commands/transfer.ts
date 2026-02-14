@@ -2,7 +2,6 @@ import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner, text, isCancel, cancel } from "@clack/prompts";
 import pc from "picocolors";
 import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
-import { Connection, SystemProgram, Transaction, PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { truncateAddress } from "../lib/format.js";
@@ -95,45 +94,16 @@ export const transferCommand = buildCommand({
 
       const handle = await sdk.transferAgent(agentId, newOwner);
 
-      let refundTx: string | undefined;
-      let refundedAmount = 0;
-
-      // Refund SOL if requested
+      // TODO: Implement refund-sol feature using @solana/kit
+      // Currently disabled due to no @solana/web3.js v1 constraint
       if (flags.refundSol) {
-        s?.message("Refunding remaining SOL...");
-
-        const rpcUrl = flags.network === "devnet" ? "https://api.devnet.solana.com" : "https://api.mainnet-beta.solana.com";
-        const connection = new Connection(rpcUrl, "confirmed");
-        const fromPubkey = new PublicKey(signer.address);
-        const toPubkey = new PublicKey(newOwner);
-
-        // Get current balance
-        const balanceLamports = await connection.getBalance(fromPubkey);
-        
-        // Keep 0.001 SOL for rent + transaction fees
-        const keepLamports = 1_000_000; // 0.001 SOL
-        const refundLamports = balanceLamports - keepLamports;
-
-        if (refundLamports > 0) {
-          // Build transfer transaction
-          const transaction = new Transaction().add(
-            SystemProgram.transfer({
-              fromPubkey,
-              toPubkey,
-              lamports: refundLamports,
-            })
-          );
-
-          // Convert KeyPairSigner to web3.js Keypair
-          const keypairBytes = signer.keyPair;
-          const web3Keypair = Keypair.fromSecretKey(keypairBytes);
-
-          // Send and confirm
-          refundTx = await connection.sendTransaction(transaction, [web3Keypair]);
-          await connection.confirmTransaction(refundTx, "confirmed");
-          refundedAmount = refundLamports / LAMPORTS_PER_SOL;
-        }
+        s?.stop(pc.yellow("⚠️  --refund-sol not yet implemented"));
+        console.log(pc.dim("  Manual refund: transfer remaining SOL separately"));
+        process.exit(1);
       }
+
+      const refundTx: string | undefined = undefined;
+      const refundedAmount = 0;
 
       if (isJson) {
         console.log(JSON.stringify({ 

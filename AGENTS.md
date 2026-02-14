@@ -31,11 +31,13 @@ This document captures patterns, expectations, and conventions learned from work
 3. **Git submodule for best-practices** - Chose submodule over copy to stay synced with upstream ERC-8004 examples
 4. **Integrated faucet** - Auto-funds devnet wallets (0.01 SOL), 5-minute rate limit for dev iteration
 5. **Simplified command surface** - 6 commands total, no interactive prompts (agent-friendly CLI)
+6. **@solana/kit 5.x ONLY** - NO @solana/web3.js v1 allowed in codebase (uses modern web3.js v2 modular architecture under the hood)
 
 **Why these matter:**
 - SDK drift was a real bug: custom schema diverged from ERC-8004 spec, caused silent data loss
 - Faucet integration removed 67% of onboarding time (users were getting stuck on public faucets)
 - Interactive prompts broke agent workflows (now flags-only for automation)
+- @solana/kit provides clean abstractions over web3.js v2, no legacy v1 dependencies
 
 ### Repository Structure
 
@@ -109,23 +111,25 @@ create-sati-agent/
 ### TypeScript Patterns
 
 **Dependencies:**
-- `@solana/web3.js` 1.98.4 (keypair generation, transactions)
+- `@solana/kit` ^5.5.1 (ONLY Solana SDK allowed - uses web3.js v2 modular architecture under the hood)
 - `@cascade-fyi/sati-sdk` (agent registration, feedback, reputation)
 - `@cascade-fyi/agent0-sdk` (ERC-8004 types and validation)
-- **NOT** `@solana/kit` - has unreliable keypair API
+- **NEVER** `@solana/web3.js` v1 - legacy SDK, forbidden in this codebase
 
-**Type safety lessons learned:**
+**CRITICAL RULE: NO @solana/web3.js imports**
 ```typescript
-// ❌ Bad - @solana/kit has broken .privateKey property
-import { generateKeyPair } from '@solana/kit';
-const keypair = await generateKeyPair();
-const secretKey = Array.from(keypair.privateKey); // privateKey is undefined!
+// ❌ FORBIDDEN - Do not import web3.js v1 directly
+import { Keypair, Connection, Transaction } from '@solana/web3.js';
 
-// ✅ Good - @solana/web3.js has stable API
-import { Keypair } from '@solana/web3.js';
-const keypair = Keypair.generate();
-const secretKey = Array.from(keypair.secretKey); // secretKey exists reliably
+// ✅ REQUIRED - Use @solana/kit abstractions only
+import { SolanaKit } from '@solana/kit';
 ```
+
+**Why @solana/kit only:**
+- Modern abstractions over web3.js v2 modular architecture
+- Consistent API surface
+- No legacy v1 dependencies
+- Maintainer explicitly requires this (do not violate)
 
 **Build requirements:**
 - Must compile cleanly with no warnings
