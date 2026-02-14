@@ -99,12 +99,17 @@ npx create-sati-agent transfer <MINT> \
 init                    # create template
 publish                 # publish or update agent
 search                  # find agents by name
-info <MINT>             # show agent details + feedback
+info [MINT]             # show agent details + feedback (auto-discovers from agent-registration.json)
 give-feedback           # submit on-chain attestation
 transfer <MINT>         # change ownership
 ```
 
 All commands support `--help` for details, `--json` for parseable output, `--network devnet|mainnet`.
+
+**Context-aware commands:**
+- `info` - When run in a directory with `agent-registration.json`, automatically shows all registered agents (devnet + mainnet)
+- `info --network devnet` - Filter to specific network
+- `info <MINT> --network devnet` - Query any agent by mint address
 
 ## Feedback Tags
 

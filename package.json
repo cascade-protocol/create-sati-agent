@@ -1,6 +1,6 @@
 {
   "name": "create-sati-agent",
-  "version": "0.2.1",
+  "version": "0.3.0",
   "description": "CLI for AI agent identity on Solana - register, discover, review, and check reputation via SATI",
   "type": "module",
   "sideEffects": false,

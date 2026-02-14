@@ -561,6 +561,12 @@ export const publishCommand = buildCommand({
             console.log(pc.dim("View on Solana Explorer:"));
             console.log(pc.cyan(`  https://explorer.solana.com/address/${agentAddress}?cluster=${network}`));
             console.log();
+            console.log(pc.dim("View on SATI Dashboard:"));
+            console.log(
+              pc.cyan(`  https://sati.cascade.fyi/agent/${agentAddress}`) +
+                pc.dim(flags.network === "devnet" ? " (devnet)" : ""),
+            );
+            console.log();
           }
 
           // Next steps
