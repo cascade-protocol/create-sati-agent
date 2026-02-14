@@ -2,8 +2,6 @@ import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner, text, isCancel, cancel } from "@clack/prompts";
 import pc from "picocolors";
 import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
-import { address, lamports } from "@solana/kit";
-import { getTransferSolInstruction } from "@solana-program/system";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { truncateAddress } from "../lib/format.js";
@@ -96,50 +94,33 @@ export const transferCommand = buildCommand({
 
       const handle = await sdk.transferAgent(agentId, newOwner);
 
-      let refundTx: string | undefined;
-      let refundedAmount = 0;
-
-      // Refund SOL if requested
+      // Note: --refund-sol feature disabled for now
+      // Requires low-level transaction construction not exposed by sati-agent0-sdk
+      // Users can manually transfer SOL after ownership transfer
       if (flags.refundSol) {
-        s?.message("Refunding remaining SOL...");
-
-        const fromAddress = address(signer.address);
-        const toAddress = address(newOwner);
-
-        // Get current balance
-        const balanceResponse = await sdk.rpc.getBalance(fromAddress).send();
-        const currentBalance = balanceResponse.value;
-        
-        // Keep 0.005 SOL for rent + transaction fees (conservative estimate)
-        const keepLamports = 5_000_000n;
-        const refundLamports = currentBalance - keepLamports;
-
-        if (refundLamports > 0n) {
-          // Build SOL transfer instruction
-          const transferIx = getTransferSolInstruction({
-            source: fromAddress,
-            destination: toAddress,
-            amount: lamports(refundLamports),
-          });
-
-          // Send transaction using SDK's signAndSend
-          refundTx = await sdk.signAndSend([transferIx]);
-          
-          // Wait for confirmation
-          await new Promise(resolve => setTimeout(resolve, 2000));
-          
-          refundedAmount = Number(refundLamports) / 1_000_000_000; // Convert to SOL
-        }
+        s?.stop(pc.yellow("⚠️  --refund-sol not yet implemented"));
+        console.log();
+        console.log(pc.dim("To refund remaining SOL manually:"));
+        console.log(pc.dim(`  solana transfer ${newOwner} ALL --keypair ${flags.keypair ?? "~/.config/solana/id.json"}`));
+        console.log();
+        process.exit(1);
       }
 
+      const refundTx: string | undefined = undefined;
+      const refundedAmount = 0;
+
       if (isJson) {
-        console.log(JSON.stringify({ 
+        const result: Record<string, unknown> = { 
           txHash: handle.hash, 
           from: signer.address, 
           to: newOwner, 
-          agentId,
-          ...(refundTx && { refundTx, refundedSol: refundedAmount })
-        }, null, 2));
+          agentId
+        };
+        if (refundTx) {
+          result.refundTx = refundTx;
+          result.refundedSol = refundedAmount;
+        }
+        console.log(JSON.stringify(result, null, 2));
         return;
       }
 
