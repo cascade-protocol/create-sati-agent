@@ -85,9 +85,10 @@ export function formatFeedbackList(items: Feedback[]): string {
 
     // Format timestamp if available (SDK may not expose this yet)
     let timestamp = "";
-    const fbAny = fb as any;
-    if (fbAny.timestamp) {
-      const date = new Date(fbAny.timestamp * 1000);
+    // Check if timestamp exists on the object (may be added by SDK in future)
+    if ("timestamp" in fb && typeof (fb as { timestamp?: number }).timestamp === "number") {
+      const fbTimestamp = (fb as { timestamp: number }).timestamp;
+      const date = new Date(fbTimestamp * 1000);
       const now = new Date();
       const diffMs = now.getTime() - date.getTime();
       const diffDays = Math.floor(diffMs / (1000 * 60 * 60 * 24));

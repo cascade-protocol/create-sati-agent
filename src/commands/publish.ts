@@ -8,6 +8,7 @@ import { loadKeypair } from "../lib/keypair.js";
 import { formatRegistration } from "../lib/format.js";
 import { findRegistrationFile, readRegistrationFile, writeRegistrationFile, REGISTRATION_FILE } from "../lib/config.js";
 import { validateERC8004RegistrationFile } from "../lib/erc8004-validation.js";
+import type { ServiceDefinition, RegistrationFile } from "../lib/types.js";
 
 const FAUCET_URL = "https://sati.cascade.fyi/api/faucet";
 const MIN_BALANCE_SOL = 0.007;
@@ -146,8 +147,8 @@ async function ensureFunding(
 async function syncOtherNetworks(
   signer: KeyPairSigner,
   currentNetwork: "devnet" | "mainnet",
-  data: Record<string, unknown>,
-  services: Array<{ name: string; endpoint: string }> | undefined,
+  data: RegistrationFile,
+  services: ServiceDefinition[] | undefined,
   active: boolean | undefined,
   supportedTrust: string[] | undefined,
   isJson: boolean | undefined,
@@ -155,7 +156,7 @@ async function syncOtherNetworks(
   description: string,
   image: string | undefined,
 ) {
-  const regs = data.registrations as Array<{ agentId: string; agentRegistry: string }> | undefined;
+  const regs = data.registrations;
   if (!regs || regs.length < 2) return;
 
   const currentChain = SOLANA_CAIP2_CHAINS[currentNetwork];
@@ -178,7 +179,7 @@ async function syncOtherNetworks(
       const agent = await otherSdk.loadAgent(reg.agentId);
       agent.updateInfo(name, description, image);
       agent.removeEndpoints();
-      for (const svc of (services as any[]) ?? []) {
+      for (const svc of services ?? []) {
         const serviceName = svc.name;
         if (serviceName === "MCP") await agent.setMCP(svc.endpoint, svc.version);
         else if (serviceName === "A2A") await agent.setA2A(svc.endpoint, svc.version);
@@ -290,15 +291,16 @@ export const publishCommand = buildCommand({
       return;
     }
 
-    const data = rawData as Record<string, unknown>;
+    // Data has been validated by validateERC8004RegistrationFile above
+    const data = rawData as unknown as RegistrationFile;
     const { name, description, image, active, supportedTrust, registrations, services } = data;
     const x402Support = data.x402Support;
 
     // Find registration matching the target network
     const chain = SOLANA_CAIP2_CHAINS[flags.network];
-    const regs = (registrations as any[] | undefined) ?? [];
+    const regs = registrations ?? [];
     const existingReg = regs.find(
-      (r: any) => typeof r.agentRegistry === "string" && r.agentRegistry.startsWith(`${chain}:`),
+      (r) => typeof r.agentRegistry === "string" && r.agentRegistry.startsWith(`${chain}:`),
     );
     const isUpdate = !!existingReg;
 
@@ -327,7 +329,7 @@ export const publishCommand = buildCommand({
       s.start("Validating endpoints...");
 
       const warnings: string[] = [];
-      for (const svc of services as any[]) {
+      for (const svc of services) {
         // Only validate HTTP endpoints (MCP, A2A)
         if (svc.name === "MCP" || svc.name === "A2A") {
           const reachable = await checkEndpoint(svc.endpoint);
@@ -346,7 +348,7 @@ export const publishCommand = buildCommand({
         console.log();
         console.log(pc.dim("This is OK - endpoints will be retried later"));
         console.log();
-      } else if (services.some((s: any) => s.name === "MCP" || s.name === "A2A")) {
+      } else if (services.some((s) => s.name === "MCP" || s.name === "A2A")) {
         s.stop(pc.dim("✓ All endpoints reachable"));
       } else {
         s.stop(pc.dim("No HTTP endpoints to validate"));
@@ -376,7 +378,7 @@ export const publishCommand = buildCommand({
 
           // Reset endpoints and re-add from file
           agent.removeEndpoints();
-          for (const svc of (services as any[]) ?? []) {
+          for (const svc of services ?? []) {
             const serviceName = svc.name;
             if (serviceName === "MCP") {
               s?.message("Fetching MCP capabilities...");
@@ -425,14 +427,14 @@ export const publishCommand = buildCommand({
           await syncOtherNetworks(
             signer,
             flags.network,
-            rawData,
-            services as Array<{ name: string; endpoint: string }> | undefined,
-            active as boolean | undefined,
-            supportedTrust as string[] | undefined,
+            data,
+            services,
+            active,
+            supportedTrust,
             isJson,
-            name as string,
-            description as string,
-            image as string | undefined,
+            name,
+            description,
+            image,
           );
 
           // Get final balance and calculate cost
@@ -454,9 +456,9 @@ export const publishCommand = buildCommand({
         } else {
           // New registration
           s?.start("Creating agent...");
-          const agent = sdk.createAgent(name as string, description as string, image as string);
+          const agent = sdk.createAgent(name, description, image);
 
-          for (const svc of (services as any[]) ?? []) {
+          for (const svc of services ?? []) {
             const serviceName = svc.name;
             if (serviceName === "MCP") {
               s?.message("Fetching MCP capabilities...");
@@ -491,12 +493,12 @@ export const publishCommand = buildCommand({
 
           // Append registration for this network
           if (mint) {
-            const existing = (registrations as any[] | undefined) ?? [];
+            const existing = registrations ?? [];
             existing.push({
               agentId: mint, // Just the mint address, not full CAIP-2
               agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
             });
-            const updatedData = { ...rawData, registrations: existing };
+            const updatedData = { ...data, registrations: existing };
             writeRegistrationFile(filePath, updatedData);
           }
 
@@ -514,13 +516,13 @@ export const publishCommand = buildCommand({
             signer,
             flags.network,
             data,
-            services as Array<{ name: string; endpoint: string }> | undefined,
-            active as boolean | undefined,
-            supportedTrust as string[] | undefined,
+            services,
+            active,
+            supportedTrust,
             isJson,
-            name as string,
-            description as string,
-            image as string | undefined,
+            name,
+            description,
+            image,
           );
 
           // Get final balance and calculate cost
