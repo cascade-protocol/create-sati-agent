@@ -1,0 +1,3 @@
+[submodule "docs/best-practices"]
+	path = docs/best-practices
+	url = https://github.com/erc-8004/best-practices.git

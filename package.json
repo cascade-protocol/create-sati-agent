@@ -19,7 +19,8 @@
     "create-sati-agent": "./dist/bin/cli.js"
   },
   "scripts": {
-    "build": "pnpm run clean && tsdown --publint",
+    "build": "pnpm run clean && tsdown --publint && pnpm run copy-templates",
+    "copy-templates": "mkdir -p dist/templates && cp src/templates/*.jsonc dist/templates/",
     "dev": "tsdown --watch",
     "type-check": "tsc --noEmit",
     "lint": "biome check",
@@ -55,7 +56,8 @@
   "files": [
     "dist/**",
     "README.md",
-    "LICENSE"
+    "LICENSE",
+    "docs/best-practices/**"
   ],
   "keywords": [
     "solana",

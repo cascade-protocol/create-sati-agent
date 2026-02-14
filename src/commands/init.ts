@@ -6,12 +6,26 @@ import os from "node:os";
 import crypto from "node:crypto";
 import { createKeyPairSignerFromBytes } from "@solana/kit";
 import { REGISTRATION_FILE } from "../lib/config.js";
+import { fileURLToPath } from "node:url";
+import { dirname } from "node:path";
+
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
 
 const TEMPLATE = {
   type: "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
   name: "MyAgent",
   description: "A helpful AI agent that does X, Y, and Z. Explain what your agent does, how it works, and what problems it solves.",
   image: "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
+  properties: {
+    files: [
+      {
+        uri: "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
+        type: "image/svg+xml"
+      }
+    ],
+    category: "image"
+  },
   services: [
     {
       name: "MCP",
@@ -21,8 +35,9 @@ const TEMPLATE = {
     }
   ],
   supportedTrust: ["reputation"],
-  active: true,
-  x402Support: true
+  active: false,
+  x402Support: false,
+  registrations: []
 };
 
 const KEYPAIR_PATH = path.join(os.homedir(), ".config", "solana", "id.json");
@@ -90,21 +105,19 @@ export const initCommand = buildCommand({
 
     console.log(pc.green("✓ Created agent-registration.json"));
     console.log();
-    console.log(pc.dim("Required fields:"));
-    console.log(pc.dim("  • type: ERC-8004 spec URL (don't change)"));
-    console.log(pc.dim("  • name: Clear, memorable agent name"));
-    console.log(pc.dim("  • description: What your agent does, how it works, what problems it solves"));
-    console.log(pc.dim("  • image: High-quality PNG/SVG/WebP URL"));
+    console.log(pc.dim("Edit the file with your agent details:"));
+    console.log(pc.cyan(`  ${filePath}`));
     console.log();
-    console.log(pc.dim("Service types (add to services array):"));
-    console.log(pc.dim("  • MCP - Model Context Protocol (mcpTools array)"));
-    console.log(pc.dim("  • A2A - Agent-to-Agent protocol (a2aSkills array)"));
-    console.log(pc.dim("  • OASF - Skills & domains taxonomy (skills, domains arrays)"));
-    console.log(pc.dim("  • ENS - Ethereum Name Service"));
-    console.log(pc.dim("  • DID - Decentralized Identifier"));
-    console.log(pc.dim("  • agentWallet - Payment address (eip155:chainId:address)"));
+    console.log(pc.dim("📖 Template with comprehensive comments & examples:"));
+    console.log(pc.cyan("   node_modules/create-sati-agent/dist/templates/agent-registration.jsonc"));
     console.log();
-    console.log(pc.dim("Trust models: reputation, crypto-economic, tee-attestation"));
+    console.log(pc.dim("📚 Documentation & guides:"));
+    console.log(pc.cyan("   • Best Practices: https://github.com/erc-8004/best-practices"));
+    console.log(pc.cyan("   • Registration Guide: https://github.com/erc-8004/best-practices/blob/main/Registration.md"));
+    console.log(pc.cyan("   • OASF Skills/Domains: https://schema.oasf.outshift.com/0.8.0"));
+    console.log();
+    console.log(pc.dim("💡 Tip: The template file has detailed comments for every field,"));
+    console.log(pc.dim("   including service-specific options (mcpTools, a2aSkills, OASF)"));
     console.log();
     console.log(pc.dim("Next steps:"));
     console.log(pc.dim("  1. Edit agent-registration.json with your agent details"));

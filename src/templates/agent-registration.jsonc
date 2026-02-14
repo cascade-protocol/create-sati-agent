@@ -1,0 +1,209 @@
+// ERC-8004 Agent Registration File Template
+// Spec: https://eips.ethereum.org/EIPS/eip-8004
+// Best Practices: https://github.com/erc-8004/best-practices
+
+{
+  // ============================================================================
+  // REQUIRED: ERC-8004 Type Identifier
+  // ============================================================================
+  // DO NOT CHANGE - This identifies the file as an ERC-8004 v1 registration
+  "type": "https://eips.ethereum.org/EIPS/eip-8004#registration-v1",
+
+  // ============================================================================
+  // REQUIRED: Agent Identity
+  // ============================================================================
+  
+  // Name: Your agent's public identifier
+  // - Keep it clear, memorable, and descriptive (≤32 chars recommended)
+  // - This appears in wallets, explorers, and NFT marketplaces
+  // - Examples: "DataAnalyst Pro", "CryptoTrader Alpha", "CodeGuardian"
+  "name": "MyAgent",
+
+  // Description: Your agent's elevator pitch (≥10 chars required)
+  // - Explain WHAT your agent does
+  // - Explain HOW it works
+  // - Explain WHAT PROBLEMS it solves
+  // - Include pricing if applicable (see best-practices for examples)
+  // - Be specific about capabilities and use cases
+  "description": "A helpful AI agent that does X, Y, and Z. Explain what your agent does, how it works, and what problems it solves. Include pricing examples if applicable.",
+
+  // Image: Your agent's avatar (required, must be a valid URL)
+  // - Use high-quality PNG, SVG, or WebP
+  // - Recommended: 256x256px or larger
+  // - This displays in Phantom, Solflare, Backpack wallets
+  // - Temporary placeholder: https://api.dicebear.com/9.x/bottts/svg?seed=YOUR_NAME
+  "image": "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
+
+  // ============================================================================
+  // OPTIONAL BUT RECOMMENDED: Properties (Metaplex/Solana NFT Standard)
+  // ============================================================================
+  // Required for proper image rendering in Phantom/Solflare wallets
+  "properties": {
+    "files": [
+      {
+        "uri": "https://api.dicebear.com/9.x/bottts/svg?seed=MyAgent",
+        "type": "image/svg+xml"
+      }
+    ],
+    "category": "image"
+  },
+
+  // ============================================================================
+  // SERVICES: How others can reach you
+  // ============================================================================
+  // Services advertise your agent's communication endpoints
+  // Add ALL endpoints you support - MCP, A2A, ENS, DID, wallets, etc.
+  
+  "services": [
+    // -------------------------------------------------------------------------
+    // MCP (Model Context Protocol)
+    // -------------------------------------------------------------------------
+    // Exposes tools, prompts, resources, and completions to MCP clients
+    {
+      "name": "MCP",
+      "endpoint": "https://myagent.com/mcp",
+      "version": "2025-06-18",  // RECOMMENDED: MCP spec version
+      
+      // OPTIONAL: List your MCP tools for better discoverability
+      // Examples: "data_analysis", "chart_generation", "code_review"
+      "mcpTools": []
+    },
+
+    // -------------------------------------------------------------------------
+    // A2A (Agent-to-Agent Protocol)
+    // -------------------------------------------------------------------------
+    // Handles agent authentication, skills, messaging, and task orchestration
+    // Endpoint should point to your .well-known/agent-card.json
+    // {
+    //   "name": "A2A",
+    //   "endpoint": "https://myagent.com/.well-known/agent-card.json",
+    //   "version": "0.3.0",  // RECOMMENDED: A2A spec version
+    //   
+    //   // OPTIONAL: List your A2A skills (slash-separated taxonomy)
+    //   // Examples from https://schema.oasf.outshift.com/0.8.0
+    //   "a2aSkills": [
+    //     "analytical_skills/coding_skills/text_to_code",
+    //     "natural_language_processing/information_retrieval_synthesis/question_answering"
+    //   ]
+    // },
+
+    // -------------------------------------------------------------------------
+    // OASF (Open Agentic Schema Framework)
+    // -------------------------------------------------------------------------
+    // Advertise capabilities using standardized taxonomy from agntcy/Linux Foundation
+    // Reference: https://schema.oasf.outshift.com/0.8.0
+    // {
+    //   "name": "OASF",
+    //   "endpoint": "https://github.com/agntcy/oasf/",
+    //   "version": "v0.8.0",
+    //   
+    //   // OPTIONAL: Your agent's skills (see docs/best-practices/src/all_skills.json)
+    //   "skills": [
+    //     "data_engineering/data_transformation_pipeline",
+    //     "natural_language_processing/natural_language_generation/summarization",
+    //     "advanced_reasoning_planning/strategic_planning"
+    //   ],
+    //   
+    //   // OPTIONAL: Your agent's domains (see docs/best-practices/src/all_domains.json)
+    //   "domains": [
+    //     "finance_and_business/investment_services",
+    //     "technology/data_science/data_visualization",
+    //     "healthcare/telemedicine"
+    //   ]
+    // },
+
+    // -------------------------------------------------------------------------
+    // ENS (Ethereum Name Service)
+    // -------------------------------------------------------------------------
+    // Advertise your ENS name for discoverability
+    // {
+    //   "name": "ENS",
+    //   "endpoint": "myagent.eth",
+    //   "version": "v1"
+    // },
+
+    // -------------------------------------------------------------------------
+    // DID (Decentralized Identifier)
+    // -------------------------------------------------------------------------
+    // W3C DID for verifiable, self-sovereign identity
+    // {
+    //   "name": "DID",
+    //   "endpoint": "did:ethr:0x1234567890abcdef1234567890abcdef12345678",
+    //   "version": "v1"
+    // },
+
+    // -------------------------------------------------------------------------
+    // agentWallet (Payment Address)
+    // -------------------------------------------------------------------------
+    // Where your agent receives payments (works with x402 protocol)
+    // Format: CAIP-10 (namespace:chainId:address)
+    // Examples:
+    //   - Ethereum mainnet: "eip155:1:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7"
+    //   - Polygon: "eip155:137:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7"
+    //   - Solana: "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:YOUR_WALLET"
+    // {
+    //   "name": "agentWallet",
+    //   "endpoint": "eip155:1:0x742d35Cc6634C0532925a3b844Bc9e7595f0bEb7"
+    // }
+  ],
+
+  // ============================================================================
+  // TRUST MODELS: How users can verify your agent
+  // ============================================================================
+  // Options: "reputation", "crypto-economic", "tee-attestation"
+  // Most agents should include at least ["reputation"] for on-chain feedback
+  "supportedTrust": [
+    "reputation"
+  ],
+
+  // ============================================================================
+  // STATUS FLAGS
+  // ============================================================================
+  
+  // active: Is your agent production-ready?
+  // - false = testing/development (default until you're ready)
+  // - true = production, accepting real users
+  // Tip: Keep false until fully tested, then flip to true
+  "active": false,
+
+  // x402Support: Do you support x402 payment protocol?
+  // - true = you accept payments via x402 standard (proof-of-payment)
+  // - false = free service or custom payment method
+  "x402Support": false,
+
+  // ============================================================================
+  // REGISTRATIONS: On-chain identities (auto-populated after publish)
+  // ============================================================================
+  // DO NOT EDIT MANUALLY - The CLI writes this after publishing
+  // 
+  // After running `npx create-sati-agent publish`, this will contain:
+  // {
+  //   "agentId": "MINT_ADDRESS",  // ← Your Solana NFT mint address
+  //   "agentRegistry": "solana:EtWTRABZaYq6iMfeYKouRu166VU2xqa1:satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe"
+  // }
+  //
+  // NOTE: agentId is a STRING (Solana mint address), not a number
+  // - ERC-8004 on EVM uses numeric tokenIds (e.g., agentId: 42)
+  // - SATI on Solana uses base58 public keys as NFT identifiers
+  // - Both are valid per CAIP-2 cross-chain standard
+  // - The agentRegistry field contains the chain info (CAIP-2 format)
+  //
+  // Cross-chain agents can have multiple registrations:
+  // "registrations": [
+  //   {
+  //     "agentId": "SOLANA_MINT_ADDRESS",
+  //     "agentRegistry": "solana:5eykt4UsFv8P8NJdTREpY1vzqKqZKvdp:satiRkxEiwZ51cv8PRu8UMzuaqeaNU9jABo6oAFMsLe"
+  //   },
+  //   {
+  //     "agentId": 108,
+  //     "agentRegistry": "eip155:8453:0x8004a6090Cd10A7288092483047B097295Fb8847"
+  //   }
+  // ]
+  "registrations": []
+
+  // ============================================================================
+  // OPTIONAL: External URL (Metaplex standard)
+  // ============================================================================
+  // Link to your agent's homepage, docs, or control panel
+  // "external_url": "https://myagent.example.com"
+}

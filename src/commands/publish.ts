@@ -12,6 +12,9 @@ import { validateERC8004RegistrationFile } from "../lib/erc8004-validation.js";
 const FAUCET_URL = "https://sati.cascade.fyi/api/faucet";
 const MIN_BALANCE_SOL = 0.007;
 
+// Services with dedicated SDK setters (others stored in IPFS metadata)
+const SDK_SUPPORTED_SERVICES = ["MCP", "A2A", "ENS", "agentWallet"];
+
 async function checkEndpoint(url: string, name: string): Promise<boolean> {
   try {
     const controller = new AbortController();
@@ -363,7 +366,9 @@ export const publishCommand = buildCommand({
           const satiReg = existingReg;
 
           s?.start("Loading agent...");
-          const agent = await sdk.loadAgent(satiReg.agentId);
+          // Construct CAIP-2 agentId from mint + chain (registrations stores just mint per ERC-8004)
+          const agentId = `${chain}:${satiReg.agentId}`;
+          const agent = await sdk.loadAgent(agentId);
 
           // Apply changes from file
           agent.updateInfo(name, description, image);
@@ -382,11 +387,10 @@ export const publishCommand = buildCommand({
               agent.setENS(svc.endpoint, svc.version);
             } else if (serviceName === "agentWallet") {
               agent.setWallet(svc.endpoint);
-            } else if (serviceName === "DID" || serviceName === "OASF") {
-              // DID and OASF don't have dedicated SDK setters
-              // They'll be stored in metadata/IPFS
+            } else if (!SDK_SUPPORTED_SERVICES.includes(serviceName)) {
+              // Custom service type (DID, OASF, or user-defined) - stored in IPFS metadata
               if (!isJson) {
-                log.info(`${serviceName} service will be stored in IPFS metadata`);
+                log.info(`${serviceName} service will be stored in IPFS metadata (no SDK setter)`);
               }
             }
           }
@@ -406,8 +410,11 @@ export const publishCommand = buildCommand({
           s?.message("Updating on-chain...");
           const handle = await agent.updateIPFS();
 
+          // Reconstruct full CAIP-2 agentId for output (registrations stores just mint per ERC-8004)
+          const fullAgentId = `${chain}:${satiReg.agentId}`;
+          
           if (isJson) {
-            console.log(JSON.stringify({ hash: handle.hash, agentId: satiReg.agentId }, null, 2));
+            console.log(JSON.stringify({ hash: handle.hash, agentId: fullAgentId }, null, 2));
             return;
           }
 
@@ -432,7 +439,7 @@ export const publishCommand = buildCommand({
           const cost = balanceBefore - balanceAfter;
 
           console.log();
-          console.log(formatRegistration({ hash: handle.hash, agentId: satiReg.agentId }));
+          console.log(formatRegistration({ hash: handle.hash, agentId: fullAgentId }));
           console.log();
           
           // Cost breakdown
@@ -460,10 +467,10 @@ export const publishCommand = buildCommand({
               agent.setENS(svc.endpoint, svc.version);
             } else if (serviceName === "agentWallet") {
               agent.setWallet(svc.endpoint);
-            } else if (serviceName === "DID" || serviceName === "OASF") {
-              // DID and OASF don't have dedicated SDK setters
+            } else if (!SDK_SUPPORTED_SERVICES.includes(serviceName)) {
+              // Custom service type (DID, OASF, or user-defined) - stored in IPFS metadata
               if (!isJson) {
-                log.info(`${serviceName} service will be stored in IPFS metadata`);
+                log.info(`${serviceName} service will be stored in IPFS metadata (no SDK setter)`);
               }
             }
           }
@@ -479,18 +486,20 @@ export const publishCommand = buildCommand({
 
           s?.message("Registering on-chain...");
           const handle = await agent.registerIPFS();
-          const agentId = agent.agentId;
+          const mint = agent.identity?.mint;
 
           // Append registration for this network
-          if (agentId) {
+          if (mint) {
             const existing = registrations ?? [];
             existing.push({
-              agentId,
+              agentId: mint,  // Just the mint address, not full CAIP-2
               agentRegistry: `${chain}:${SATI_PROGRAM_ADDRESS}`,
             });
             const updatedData = { ...rawData, registrations: existing };
             writeRegistrationFile(filePath, updatedData);
           }
+          
+          const agentId = agent.agentId;
 
           if (isJson) {
             console.log(JSON.stringify({ hash: handle.hash, agentId }, null, 2));

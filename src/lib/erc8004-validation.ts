@@ -9,7 +9,7 @@ export interface ValidationError {
   message: string;
 }
 
-const VALID_SERVICE_TYPES = ["MCP", "A2A", "OASF", "ENS", "DID", "agentWallet"];
+const KNOWN_SERVICE_TYPES = ["MCP", "A2A", "OASF", "ENS", "DID", "agentWallet"];
 const VALID_TRUST_MODELS = ["reputation", "crypto-economic", "tee-attestation"];
 
 const ERC8004_SPEC_URL = "https://eips.ethereum.org/EIPS/eip-8004#registration-v1";
@@ -60,6 +60,35 @@ export function validateERC8004RegistrationFile(data: unknown): ValidationError[
     }
   }
 
+  // Optional: properties (Metaplex/Solana NFT standard - recommended for wallet display)
+  if (file.properties !== undefined) {
+    if (typeof file.properties !== "object" || file.properties === null) {
+      errors.push({ field: "properties", message: "Must be an object" });
+    } else {
+      const props = file.properties as Record<string, unknown>;
+      
+      if (props.files !== undefined) {
+        if (!Array.isArray(props.files)) {
+          errors.push({ field: "properties.files", message: "Must be an array" });
+        } else {
+          props.files.forEach((f, i) => {
+            if (typeof f !== "object" || f === null) {
+              errors.push({ field: `properties.files[${i}]`, message: "Must be an object" });
+              return;
+            }
+            const fileObj = f as Record<string, unknown>;
+            if (typeof fileObj.uri !== "string") {
+              errors.push({ field: `properties.files[${i}].uri`, message: "Required, must be a URL" });
+            }
+            if (typeof fileObj.type !== "string") {
+              errors.push({ field: `properties.files[${i}].type`, message: "Required, must be a MIME type" });
+            }
+          });
+        }
+      }
+    }
+  }
+
   // Optional: services array
   if (file.services !== undefined) {
     if (!Array.isArray(file.services)) {
@@ -76,12 +105,8 @@ export function validateERC8004RegistrationFile(data: unknown): ValidationError[
         // Required: name
         if (typeof service.name !== "string") {
           errors.push({ field: `services[${i}].name`, message: "Required, must be a string" });
-        } else if (!VALID_SERVICE_TYPES.includes(service.name)) {
-          errors.push({
-            field: `services[${i}].name`,
-            message: `Must be one of: ${VALID_SERVICE_TYPES.join(", ")}`,
-          });
         }
+        // Note: ERC-8004 allows custom service types, so we don't restrict to known types
 
         // Required: endpoint
         if (typeof service.endpoint !== "string" || service.endpoint.length === 0) {

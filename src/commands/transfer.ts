@@ -2,6 +2,7 @@ import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner, text, isCancel, cancel } from "@clack/prompts";
 import pc from "picocolors";
 import { formatSatiAgentId, SOLANA_CAIP2_CHAINS } from "@cascade-fyi/sati-agent0-sdk";
+import { Connection, SystemProgram, Transaction, PublicKey, Keypair, LAMPORTS_PER_SOL } from "@solana/web3.js";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { truncateAddress } from "../lib/format.js";
@@ -11,6 +12,7 @@ interface TransferFlags {
   keypair?: string;
   network: "devnet" | "mainnet";
   json?: boolean;
+  refundSol?: boolean;
 }
 
 export const transferCommand = buildCommand({
@@ -40,6 +42,11 @@ export const transferCommand = buildCommand({
       json: {
         kind: "boolean",
         brief: "Output raw JSON",
+        optional: true,
+      },
+      refundSol: {
+        kind: "boolean",
+        brief: "Send remaining SOL to new owner after transfer",
         optional: true,
       },
     },
@@ -88,8 +95,54 @@ export const transferCommand = buildCommand({
 
       const handle = await sdk.transferAgent(agentId, newOwner);
 
+      let refundTx: string | undefined;
+      let refundedAmount = 0;
+
+      // Refund SOL if requested
+      if (flags.refundSol) {
+        s?.message("Refunding remaining SOL...");
+
+        const rpcUrl = flags.network === "devnet" ? "https://api.devnet.solana.com" : "https://api.mainnet-beta.solana.com";
+        const connection = new Connection(rpcUrl, "confirmed");
+        const fromPubkey = new PublicKey(signer.address);
+        const toPubkey = new PublicKey(newOwner);
+
+        // Get current balance
+        const balanceLamports = await connection.getBalance(fromPubkey);
+        
+        // Keep 0.001 SOL for rent + transaction fees
+        const keepLamports = 1_000_000; // 0.001 SOL
+        const refundLamports = balanceLamports - keepLamports;
+
+        if (refundLamports > 0) {
+          // Build transfer transaction
+          const transaction = new Transaction().add(
+            SystemProgram.transfer({
+              fromPubkey,
+              toPubkey,
+              lamports: refundLamports,
+            })
+          );
+
+          // Convert KeyPairSigner to web3.js Keypair
+          const keypairBytes = signer.keyPair;
+          const web3Keypair = Keypair.fromSecretKey(keypairBytes);
+
+          // Send and confirm
+          refundTx = await connection.sendTransaction(transaction, [web3Keypair]);
+          await connection.confirmTransaction(refundTx, "confirmed");
+          refundedAmount = refundLamports / LAMPORTS_PER_SOL;
+        }
+      }
+
       if (isJson) {
-        console.log(JSON.stringify({ txHash: handle.hash, from: signer.address, to: newOwner, agentId }, null, 2));
+        console.log(JSON.stringify({ 
+          txHash: handle.hash, 
+          from: signer.address, 
+          to: newOwner, 
+          agentId,
+          ...(refundTx && { refundTx, refundedSol: refundedAmount })
+        }, null, 2));
         return;
       }
 
@@ -98,6 +151,13 @@ export const transferCommand = buildCommand({
       console.log(`  ${pc.dim("Tx:")}   ${handle.hash}`);
       console.log(`  ${pc.dim("From:")} ${truncateAddress(signer.address, 6)}`);
       console.log(`  ${pc.dim("To:")}   ${truncateAddress(newOwner, 6)}`);
+      
+      if (refundTx) {
+        console.log();
+        console.log(pc.green(`✓ Refunded ${refundedAmount.toFixed(4)} SOL to new owner`));
+        console.log(`  ${pc.dim("Tx:")} ${refundTx}`);
+      }
+      
       console.log();
       outro(pc.dim("Ownership transferred on Solana"));
     } catch (error) {
