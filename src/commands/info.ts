@@ -90,18 +90,53 @@ export const infoCommand = buildCommand({
 
       const sdk = createSdk(flags.network);
       const chain = SOLANA_CAIP2_CHAINS[flags.network];
-      const agentId = formatSatiAgentId(mintAddress, chain);
+
+      let agentId: string;
+      try {
+        agentId = formatSatiAgentId(mintAddress, chain);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.toLowerCase().includes("base58") || errorMsg.toLowerCase().includes("address")) {
+          console.error(pc.red("Error: Invalid Solana address format"));
+          console.log();
+          console.log(pc.dim(`Address provided: ${mintAddress} (${mintAddress.length} characters)`));
+          console.log(pc.dim("Expected: 32-44 base58 characters"));
+          console.log();
+          process.exit(1);
+        }
+        throw error;
+      }
 
       if (flags.json) {
-        const agent = await sdk.getAgent(agentId);
-        let feedbacks: unknown[] = [];
         try {
-          feedbacks = await sdk.searchFeedback({ agentId }, { includeTxHash: false });
-          feedbacks = feedbacks.slice(0, limit);
-        } catch {
-          // Feedback query failure is non-fatal
+          const agent = await sdk.getAgent(agentId);
+          let feedbacks: unknown[] = [];
+          try {
+            feedbacks = await sdk.searchFeedback({ agentId }, { includeTxHash: false });
+            feedbacks = feedbacks.slice(0, limit);
+          } catch {
+            // Feedback query failure is non-fatal
+          }
+          console.log(JSON.stringify({ agent, feedbacks }, null, 2));
+        } catch (error) {
+          const errorMsg = error instanceof Error ? error.message : String(error);
+          if (errorMsg.toLowerCase().includes("base58") || errorMsg.toLowerCase().includes("address")) {
+            console.error(
+              JSON.stringify(
+                {
+                  error: "Invalid Solana address format",
+                  address: mintAddress,
+                  length: mintAddress.length,
+                  expected: "32-44 base58 characters",
+                },
+                null,
+                2,
+              ),
+            );
+            process.exit(1);
+          }
+          throw error;
         }
-        console.log(JSON.stringify({ agent, feedbacks }, null, 2));
         return;
       }
 
@@ -150,6 +185,18 @@ export const infoCommand = buildCommand({
         outro(pc.dim(`Network: ${flags.network}`));
       } catch (error) {
         s.stop(pc.red("Failed"));
+
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.toLowerCase().includes("base58") || errorMsg.toLowerCase().includes("address")) {
+          console.log();
+          log.error("Invalid Solana address format");
+          console.log();
+          console.log(pc.dim(`Address provided: ${mintAddress} (${mintAddress.length} characters)`));
+          console.log(pc.dim("Expected: 32-44 base58 characters"));
+          console.log();
+          process.exit(1);
+        }
+
         throw error;
       }
       return;

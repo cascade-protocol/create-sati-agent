@@ -92,11 +92,43 @@ export const giveFeedbackCommand = buildCommand({
     }
 
     const s = !isJson ? spinner() : null;
+    // Validate agent address format
+    if (flags.agent.length < 32 || flags.agent.length > 44 || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(flags.agent)) {
+      if (!isJson) {
+        log.error("Invalid agent address format");
+        console.log();
+        console.log(pc.dim(`Address provided: ${flags.agent} (${flags.agent.length} characters)`));
+        console.log(pc.dim("Expected: 32-44 base58 characters"));
+        console.log();
+      } else {
+        console.error(JSON.stringify({ error: "Invalid agent address format" }, null, 2));
+      }
+      process.exit(1);
+    }
+
     s?.start("Submitting feedback on-chain...");
 
     const sdk = createSdk(flags.network, signer);
     const chain = SOLANA_CAIP2_CHAINS[flags.network];
-    const agentId = formatSatiAgentId(flags.agent, chain);
+
+    let agentId: string;
+    try {
+      agentId = formatSatiAgentId(flags.agent, chain);
+    } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : String(error);
+      if (errorMsg.toLowerCase().includes("base58") || errorMsg.toLowerCase().includes("address")) {
+        if (!isJson) {
+          log.error("Invalid agent address format");
+          console.log();
+          console.log(pc.dim(`Address: ${flags.agent}`));
+          console.log();
+        } else {
+          console.error(JSON.stringify({ error: "Invalid agent address format" }, null, 2));
+        }
+        process.exit(1);
+      }
+      throw error;
+    }
 
     try {
       const handle = await sdk.giveFeedback(agentId, flags.value, flags.tag1, flags.tag2, flags.endpoint);

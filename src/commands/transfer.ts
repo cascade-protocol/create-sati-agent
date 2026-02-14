@@ -82,13 +82,57 @@ export const transferCommand = buildCommand({
     }
 
     const s = !isJson ? spinner() : null;
+    // Validate agent mint address format
+    if (mint.length < 32 || mint.length > 44 || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(mint)) {
+      if (!isJson) {
+        console.error(pc.red("Error: Invalid agent mint address format"));
+        console.log();
+        console.log(pc.dim(`Address provided: ${mint} (${mint.length} characters)`));
+        console.log(pc.dim("Expected: 32-44 base58 characters"));
+        console.log();
+      } else {
+        console.error(JSON.stringify({ error: "Invalid agent mint address format" }, null, 2));
+      }
+      process.exit(1);
+    }
+
+    // Validate new owner address format
+    if (newOwner.length < 32 || newOwner.length > 44 || !/^[1-9A-HJ-NP-Za-km-z]+$/.test(newOwner)) {
+      if (!isJson) {
+        console.error(pc.red("Error: Invalid new owner address format"));
+        console.log();
+        console.log(pc.dim(`Address provided: ${newOwner} (${newOwner.length} characters)`));
+        console.log(pc.dim("Expected: 32-44 base58 characters"));
+        console.log();
+      } else {
+        console.error(JSON.stringify({ error: "Invalid new owner address format" }, null, 2));
+      }
+      process.exit(1);
+    }
+
     s?.start("Loading keypair...");
 
     try {
       const signer = await loadKeypair(flags.keypair);
       const sdk = createSdk(flags.network, signer);
       const chain = SOLANA_CAIP2_CHAINS[flags.network];
-      const agentId = formatSatiAgentId(mint, chain);
+
+      let agentId: string;
+      try {
+        agentId = formatSatiAgentId(mint, chain);
+      } catch (error) {
+        const errorMsg = error instanceof Error ? error.message : String(error);
+        if (errorMsg.toLowerCase().includes("base58") || errorMsg.toLowerCase().includes("address")) {
+          if (!isJson) {
+            console.error(pc.red("Error: Invalid agent mint address"));
+            console.log();
+          } else {
+            console.error(JSON.stringify({ error: "Invalid agent mint address" }, null, 2));
+          }
+          process.exit(1);
+        }
+        throw error;
+      }
 
       s?.message("Transferring agent...");
 
