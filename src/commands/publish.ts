@@ -90,9 +90,25 @@ async function ensureFunding(
       s?.stop(pc.red("Faucet request failed"));
       if (!isJson) {
         console.log();
-        log.error(result.error || `HTTP ${res.status}`);
-        console.log();
-        console.log(pc.dim("Try public faucet: https://faucet.solana.com"));
+        
+        // Check if it's a rate limit error
+        if (res.status === 429 || result.error?.toLowerCase().includes('rate limit')) {
+          log.error("Faucet rate limit (1 request per 5 minutes)");
+          console.log();
+          console.log(pc.dim("Your wallet address:"));
+          console.log(pc.cyan(`  ${signer.address}`));
+          console.log();
+          console.log(pc.dim("Funding options:"));
+          console.log(pc.dim("  1. Wait 5 minutes and retry this command"));
+          console.log(pc.dim("  2. Use public faucet: https://faucet.solana.com"));
+          console.log(pc.dim("     (paste your wallet address above)"));
+          console.log(pc.dim("  3. Use Solana CLI: solana airdrop 0.01 --url devnet"));
+        } else {
+          log.error(result.error || `HTTP ${res.status}`);
+          console.log();
+          console.log(pc.dim("Your wallet:"), pc.cyan(signer.address));
+          console.log(pc.dim("Try public faucet: https://faucet.solana.com"));
+        }
         console.log();
       }
       process.exit(1);
@@ -523,7 +539,11 @@ export const publishCommand = buildCommand({
         if (errorMsg.includes("blockhash") || errorMsg.includes("timeout")) {
           if (!isJson) {
             console.log();
-            log.error("Network congestion - try again in a few seconds");
+            log.error("Transaction timed out (blockhash expired)");
+            console.log();
+            console.log(pc.dim("This is common on Solana - transactions must land within ~60 seconds"));
+            console.log(pc.dim("Just retry the publish command:"));
+            console.log(pc.cyan(`  npx create-sati-agent publish --network ${flags.network}`));
             console.log();
           }
           process.exit(1);
