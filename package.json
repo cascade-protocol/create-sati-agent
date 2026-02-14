@@ -33,7 +33,6 @@
     "agent:status": "node dist/bin/cli.js status",
     "agent:discover": "node dist/bin/cli.js discover",
     "agent:info": "node dist/bin/cli.js info",
-    "agent:reputation": "node dist/bin/cli.js reputation",
     "agent:feedback": "node dist/bin/cli.js feedback"
   },
   "dependencies": {

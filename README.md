@@ -96,11 +96,9 @@ npx create-sati-agent status
 # Discover registered agents
 npx create-sati-agent discover --name "weather" --network devnet
 
-# Get agent details (shows complete on-chain registration JSON)
+# Get agent details (shows complete on-chain registration JSON + recent feedback)
 npx create-sati-agent info <MINT_ADDRESS> --network devnet
-
-# Check reputation (count + average score)
-npx create-sati-agent reputation <MINT_ADDRESS> --tag1 starred [--verbose]
+npx create-sati-agent info <MINT> --limit 100  # Show more feedback (max 1000)
 
 # Give feedback (on-chain attestation)
 npx create-sati-agent feedback --agent <MINT> --value 85 --tag1 starred

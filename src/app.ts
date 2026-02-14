@@ -6,7 +6,6 @@ import { statusCommand } from "./commands/status.js";
 import { discoverCommand } from "./commands/discover.js";
 import { infoCommand } from "./commands/info.js";
 import { feedbackCommand } from "./commands/feedback.js";
-import { reputationCommand } from "./commands/reputation.js";
 import { transferCommand } from "./commands/transfer.js";
 
 const routes = buildRouteMap({
@@ -18,7 +17,6 @@ const routes = buildRouteMap({
     discover: discoverCommand,
     info: infoCommand,
     feedback: feedbackCommand,
-    reputation: reputationCommand,
     transfer: transferCommand,
   },
   defaultCommand: "status",

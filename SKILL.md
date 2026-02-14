@@ -111,15 +111,11 @@ npx create-sati-agent discover --name "weather" --network devnet
 
 ### Get agent details
 
+Shows complete on-chain registration JSON plus recent feedback.
+
 ```bash
 npx create-sati-agent info <MINT> --network devnet
-```
-
-### Check reputation
-
-```bash
-npx create-sati-agent reputation <MINT> --network devnet
-npx create-sati-agent reputation <MINT> --tag1 starred --network devnet
+npx create-sati-agent info <MINT> --limit 100  # Show more feedback (default 10, max 1000)
 ```
 
 ### Give feedback (free)
