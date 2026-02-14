@@ -138,20 +138,35 @@ import { SolanaKit } from '@solana/kit';
 
 ### Testing & Validation
 
-**Three-level testing approach:**
+**CRITICAL: Run after EVERY code change**
+```bash
+pnpm check  # TypeScript + Biome linting, MUST pass
+```
+**No exceptions.** This catches type errors, unused variables, and formatting issues before they become bugs.
 
-1. **Build validation**
+**Four-level testing approach:**
+
+1. **Type checking & linting (MANDATORY)**
    ```bash
-   pnpm build  # Must complete with no warnings
+   pnpm check  # Must pass with 0 errors (warnings OK if intentional)
+   ```
+   - Runs `tsc --noEmit` (TypeScript type checking)
+   - Runs `biome check` (linting + formatting)
+   - **When:** After every code change, before commit
+   - **Why:** Type errors become runtime bugs, linting catches common mistakes
+
+2. **Build validation**
+   ```bash
+   pnpm build  # Must complete with no errors
    ```
 
-2. **Fresh user flow simulation**
+3. **Fresh user flow simulation**
    - Test as if you've never used Solana before
    - Actually run: `init` → `publish` → `info`
    - Check error messages are actionable
    - **Why:** Fresh user path is the critical path (most users won't have existing setup)
 
-3. **Code review simulation**
+4. **Code review simulation**
    - Spawn subagent to act as "5 senior Solana developers"
    - Focus on: edge cases, race conditions, error handling
    - **Real bugs caught this way:** Zod v4 breaking change, faucet race condition, schema drift
@@ -163,17 +178,20 @@ Root cause: Balance check happened BEFORE transaction confirmed
 Fix: Added 3-second confirmation wait
 ```
 
-**Testing workflow:**
+**Complete testing workflow:**
 ```bash
-# 1. Build
+# 1. Type check & lint (MANDATORY)
+pnpm check
+
+# 2. Build
 pnpm build
 
-# 2. Fresh user flow
+# 3. Fresh user flow
 npx . init
 npx . publish --network devnet
 npx . info <MINT> --network devnet
 
-# 3. Verify in explorer
+# 4. Verify in explorer
 # Check Solscan for agent mint, verify metadata IPFS hash
 ```
 
