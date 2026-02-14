@@ -2,12 +2,15 @@ import { buildCommand } from "@stricli/core";
 import { intro, outro, spinner, log } from "@clack/prompts";
 import pc from "picocolors";
 import { SOLANA_CAIP2_CHAINS, SATI_PROGRAM_ADDRESS } from "@cascade-fyi/sati-agent0-sdk";
-import type { KeyPairSigner } from "@solana/kit";
+import { createSolanaRpc, address, type KeyPairSigner } from "@solana/kit";
 import { createSdk } from "../lib/sdk.js";
 import { loadKeypair } from "../lib/keypair.js";
 import { formatRegistration } from "../lib/format.js";
 import { findRegistrationFile, readRegistrationFile, writeRegistrationFile, REGISTRATION_FILE } from "../lib/config.js";
 import { AgentRegistrationSchema } from "../lib/validation.js";
+
+const FAUCET_URL = "https://sati.cascade.fyi/api/faucet";
+const MIN_BALANCE_SOL = 0.007;
 
 interface PublishFlags {
   keypair?: string;
@@ -18,6 +21,78 @@ interface PublishFlags {
 const NETWORK_FOR_CHAIN = Object.fromEntries(
   Object.entries(SOLANA_CAIP2_CHAINS).map(([net, ch]) => [ch, net]),
 ) as Record<string, "devnet" | "mainnet" | "localnet">;
+
+async function ensureFunding(
+  signer: KeyPairSigner,
+  network: "devnet" | "mainnet",
+  isJson: boolean | undefined,
+): Promise<void> {
+  const rpcUrl = network === "devnet" ? "https://api.devnet.solana.com" : "https://api.mainnet-beta.solana.com";
+  const rpc = createSolanaRpc(rpcUrl);
+
+  const s = !isJson ? spinner() : null;
+  s?.start("Checking balance...");
+
+  const addr = address(signer.address);
+  const { value: balance } = await rpc.getBalance(addr, { commitment: "confirmed" }).send();
+  const sol = Number(balance) / 1_000_000_000;
+
+  if (sol >= MIN_BALANCE_SOL) {
+    s?.stop(pc.dim(`Balance: ${sol.toFixed(4)} SOL`));
+    return;
+  }
+
+  // Insufficient balance
+  if (network === "mainnet") {
+    s?.stop(pc.red(`Insufficient balance: ${sol.toFixed(4)} SOL`));
+    if (!isJson) {
+      console.log();
+      log.error(`Need at least ${MIN_BALANCE_SOL} SOL for registration`);
+      console.log();
+      console.log(pc.dim("Fund your wallet:"));
+      console.log(pc.cyan(`  ${signer.address}`));
+      console.log();
+    }
+    process.exit(1);
+  }
+
+  // Devnet - request from faucet
+  s?.message("Requesting devnet SOL from faucet...");
+
+  try {
+    const res = await fetch(FAUCET_URL, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ address: signer.address, network: "devnet" }),
+    });
+
+    const result = (await res.json()) as { success?: boolean; error?: string; signature?: string };
+
+    if (!res.ok || !result.success) {
+      s?.stop(pc.red("Faucet request failed"));
+      if (!isJson) {
+        console.log();
+        log.error(result.error || `HTTP ${res.status}`);
+        console.log();
+        console.log(pc.dim("Try public faucet: https://faucet.solana.com"));
+        console.log();
+      }
+      process.exit(1);
+    }
+
+    s?.stop(pc.dim(`Funded: +0.01 SOL (${result.signature?.slice(0, 8)}...)`));
+  } catch (error) {
+    s?.stop(pc.red("Faucet request failed"));
+    if (!isJson) {
+      console.log();
+      log.error(error instanceof Error ? error.message : String(error));
+      console.log();
+      console.log(pc.dim("Try public faucet: https://faucet.solana.com"));
+      console.log();
+    }
+    process.exit(1);
+  }
+}
 
 async function syncOtherNetworks(
   signer: KeyPairSigner,
@@ -161,6 +236,9 @@ export const publishCommand = buildCommand({
       }
       throw new Error("Keypair required");
     }
+
+    // Ensure wallet has sufficient balance (airdrop on devnet if needed)
+    await ensureFunding(signer, flags.network, isJson);
 
     {
       const s = !isJson ? spinner() : null;
